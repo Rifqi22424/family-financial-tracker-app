@@ -39,6 +39,8 @@ class DashboardProvider with ChangeNotifier {
 
   // Data
   double? _balance;
+  Meta? _historyExpenseMeta;
+  Meta? _historyIncomeMeta;
   List<HistoryTransaction> _historyExpense = [];
   List<HistoryTransaction> _historyIncome = [];
   List<TransactionData> _recentTransactions = [];
@@ -78,6 +80,8 @@ class DashboardProvider with ChangeNotifier {
   List<TransactionData> get recentTransactions => _recentTransactions;
   double? get totalExpense => _totalExpense;
   double? get totalIncome => _totalIncome;
+  Meta? get historyExpenseMeta => _historyExpenseMeta;
+  Meta? get historyIncomeMeta => _historyIncomeMeta;
 
   Future<void> fetchDashboardData() async {
     try {
@@ -87,6 +91,8 @@ class DashboardProvider with ChangeNotifier {
         getTotalExpense(),
         getTotalIncome(),
         getFamilyMembers(),
+        getHistoryExpense(),
+        getHistoryIncome(),
       ]);
     } catch (e) {
       print("Error fetching dashboard data: ${e.toString()}");
@@ -119,9 +125,11 @@ class DashboardProvider with ChangeNotifier {
     String transactionType = "EXPENSE",
     String timePeriod = "all",
   }) async {
-    _historyExpenseState = DashboardState.loading;
-    _historyExpenseError = null;
-    _historyExpense = [];
+    if (page == 1) {
+      _historyExpenseState = DashboardState.loading;
+      _historyExpenseError = null;
+      _historyExpense = [];
+    }
     notifyListeners();
 
     try {
@@ -137,7 +145,12 @@ class DashboardProvider with ChangeNotifier {
         timePeriod: timePeriod,
       );
 
-      _historyExpense = response.data;
+      if (page == 1) {
+        _historyExpense = response.data;
+      } else {
+        _historyExpense.addAll(response.data);
+      }
+      _historyExpenseMeta = response.meta;
       _historyExpenseState = DashboardState.success;
     } catch (e) {
       _historyExpenseError = e.toString();
@@ -153,9 +166,11 @@ class DashboardProvider with ChangeNotifier {
     String transactionType = "INCOME",
     String timePeriod = "all",
   }) async {
-    _historyIncomeState = DashboardState.loading;
-    _historyIncomeError = null;
-    _historyIncome = [];
+    if (page == 1) {
+      _historyIncomeState = DashboardState.loading;
+      _historyIncomeError = null;
+      _historyIncome = [];
+    }
     notifyListeners();
 
     try {
@@ -171,7 +186,12 @@ class DashboardProvider with ChangeNotifier {
         timePeriod: timePeriod,
       );
 
-      _historyIncome = response.data;
+      if (page == 1) {
+        _historyIncome = response.data;
+      } else {
+        _historyIncome.addAll(response.data);
+      }
+      _historyIncomeMeta = response.meta;
       _historyIncomeState = DashboardState.success;
     } catch (e) {
       _historyIncomeError = e.toString();

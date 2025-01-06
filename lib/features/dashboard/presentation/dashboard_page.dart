@@ -1,5 +1,6 @@
 import 'package:financial_family_tracker/core/utils/input_validator_mixins.dart';
 import 'package:financial_family_tracker/features/auth/presentation/widgets/form_field_registration.dart';
+import 'package:financial_family_tracker/features/dashboard/data/models/history_transaction_response.dart';
 import 'package:financial_family_tracker/features/dashboard/states/dashboard_provider.dart';
 import 'package:financial_family_tracker/features/dashboard/widgets/date_picker.dart';
 import 'package:flutter/material.dart';
@@ -92,104 +93,6 @@ class _DashboardPageState extends State<DashboardPage>
     });
   }
 
-  SingleChildScrollView personalReport(DashboardProvider dashboardProvider) {
-    return SingleChildScrollView(
-        child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("Financial Family Tracker"),
-        Row(
-          children: [
-            Expanded(
-                child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    Text("Saldo"),
-                    Text("Rp. ${dashboardProvider.balance ?? "0"}"),
-                  ],
-                ),
-              ),
-            )),
-            Expanded(
-                child: Card(
-              child: Column(
-                children: [
-                  Text("Pemasukan"),
-                  Text("Rp. ${dashboardProvider.totalIncome ?? "0"}"),
-                ],
-              ),
-            )),
-            Expanded(
-                child: Card(
-              child: Column(
-                children: [
-                  Text("Pengeluaran"),
-                  Text("Rp. ${dashboardProvider.totalExpense ?? "0"}"),
-                ],
-              ),
-            )),
-          ],
-        ),
-        Card(
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("Rincian Pemasukan"),
-                  Text("Rincian Pemasukan"),
-                ],
-              ),
-              // DataTable(
-              //   columns: const [
-              //     DataColumn(label: Text('No')),
-              //     DataColumn(label: Text('Pengguna')),
-              //     DataColumn(label: Text('Keterangan')),
-              //     DataColumn(label: Text('Tanggal')),
-              //     DataColumn(label: Text('Jumlah')),
-              //     DataColumn(label: Text('')),
-              //   ],
-              //   rows: List<DataRow>.generate(
-              //     transactions.length,
-              //     (index) => DataRow(cells: [
-              //       DataCell(Text('${index + 1}')),
-              //       DataCell(Text(transactions[index].username)),
-              //       DataCell(Text(transactions[index].description)),
-              //       DataCell(Text(_formatDate(transactions[index].date))),
-              //       DataCell(Text(_formatCurrency(transactions[index].amount))),
-              //       DataCell(
-              //         IconButton(
-              //           icon: const Icon(Icons.more_vert),
-              //           onPressed: () {
-              //             if (onMoreTap != null) {
-              //               onMoreTap!(transactions[index]);
-              //             }
-              //           },
-              //         ),
-              //       )
-              //     ]),
-              //   ),
-              // ),
-            ],
-          ),
-        ),
-      ],
-    ));
-  }
-
-   String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}-'
-           '${date.month.toString().padLeft(2, '0')}-'
-           '${date.year}';
-  }
-
-  String _formatCurrency(double amount) {
-    return 'Rp${amount.toStringAsFixed(2)}';
-  }
-}
-
   Drawer drawer() {
     return Drawer(
       child: Column(
@@ -245,6 +148,138 @@ class _DashboardPageState extends State<DashboardPage>
         ],
       ),
     );
+  }
+
+  SingleChildScrollView personalReport(DashboardProvider dashboardProvider) {
+    print(dashboardProvider.historyExpense.length);
+    print(dashboardProvider.historyIncome.length);
+    print(dashboardProvider.historyExpenseMeta);
+    print(dashboardProvider.historyIncomeMeta);
+
+    print("error meta income ${dashboardProvider.historyIncomeError}");
+    print("error meta expense ${dashboardProvider.historyExpenseError}");
+    return SingleChildScrollView(
+        child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Financial Family Tracker"),
+        Row(
+          children: [
+            Expanded(
+                child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    Text("Saldo"),
+                    Text("Rp. ${dashboardProvider.balance ?? "0"}"),
+                  ],
+                ),
+              ),
+            )),
+            Expanded(
+                child: Card(
+              child: Column(
+                children: [
+                  Text("Pemasukan"),
+                  Text("Rp. ${dashboardProvider.totalIncome ?? "0"}"),
+                ],
+              ),
+            )),
+            Expanded(
+                child: Card(
+              child: Column(
+                children: [
+                  Text("Pengeluaran"),
+                  Text("Rp. ${dashboardProvider.totalExpense ?? "0"}"),
+                ],
+              ),
+            )),
+          ],
+        ),
+        historyTable(
+            dashboardProvider: dashboardProvider,
+            history: dashboardProvider.historyExpense,
+            meta: dashboardProvider.historyExpenseMeta,
+            state: dashboardProvider.historyExpenseState),
+        historyTable(
+            dashboardProvider: dashboardProvider,
+            history: dashboardProvider.historyIncome,
+            meta: dashboardProvider.historyIncomeMeta,
+            state: dashboardProvider.historyIncomeState),
+      ],
+    ));
+  }
+
+  Card historyTable(
+      {List<HistoryTransaction>? history,
+      Meta? meta,
+      required DashboardState state,
+      required DashboardProvider dashboardProvider}) {
+    return Card(
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("Rincian Pemasukan"),
+              Text("Rincian Pemasukan"),
+            ],
+          ),
+          SizedBox(
+            height: 400,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (ScrollNotification scrollInfo) {
+                if (scrollInfo.metrics.pixels ==
+                        scrollInfo.metrics.maxScrollExtent &&
+                    (state != DashboardState.loading)) {
+                  if (meta != null && meta!.page < meta!.totalPages) {
+                    dashboardProvider.getHistoryExpense(page: meta!.page + 1);
+                  }
+                }
+                return false;
+              },
+              child: ListView(
+                children: [
+                  DataTable(
+                    columns: const [
+                      DataColumn(label: Text('No')),
+                      DataColumn(label: Text('Keterangan')),
+                      DataColumn(label: Text('Kategori')),
+                      DataColumn(label: Text('Jumlah')),
+                      DataColumn(label: Text('Tanggal')),
+                    ],
+                    rows: history!.map((expense) {
+                      final index = history!.indexOf(expense) + 1;
+                      return DataRow(cells: [
+                        DataCell(Text('$index')),
+                        DataCell(Text(expense.description)),
+                        DataCell(Text(expense.category)),
+                        DataCell(Text('Rp. ${expense.amount.toString()}')),
+                        DataCell(Text(
+                            '${expense.transactionAt.toLocal().toString().split(' ')[0]}')),
+                      ]);
+                    }).toList(),
+                    // [
+                    // ],
+                  )
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.year}';
+  }
+
+  String _formatCurrency(double amount) {
+    return 'Rp${amount.toStringAsFixed(2)}';
   }
 
   main(DashboardProvider dashboardProvider, BuildContext context) {
