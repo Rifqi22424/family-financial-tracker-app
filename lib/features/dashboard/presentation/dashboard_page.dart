@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/consts/app_colors.dart';
+import '../data/models/family_history_trasnsaction_response.dart';
 import '../data/models/recent_transaction_response.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -75,11 +76,15 @@ class _DashboardPageState extends State<DashboardPage>
                 flex: 4,
                 child: PageView(
                   controller: _pageController,
+                  physics: NeverScrollableScrollPhysics(),
                   scrollDirection: Axis.vertical, // Animasi vertikal
                   children: [
                     main(dashboardProvider, context),
                     personalReport(dashboardProvider),
-                    main(dashboardProvider, context),
+                    familyReport(dashboardProvider),
+                    Container(
+                      child: Center(child: Text("Setting")),
+                    ),
                   ],
                 ),
               ),
@@ -201,21 +206,94 @@ class _DashboardPageState extends State<DashboardPage>
             dashboardProvider: dashboardProvider,
             history: dashboardProvider.historyExpense,
             meta: dashboardProvider.historyExpenseMeta,
-            state: dashboardProvider.historyExpenseState),
+            state: dashboardProvider.historyExpenseState,
+            type: "historyExpense"),
         historyTable(
             dashboardProvider: dashboardProvider,
             history: dashboardProvider.historyIncome,
             meta: dashboardProvider.historyIncomeMeta,
-            state: dashboardProvider.historyIncomeState),
+            state: dashboardProvider.historyIncomeState,
+            type: "historyIncome"),
       ],
     ));
   }
 
-  Card historyTable(
-      {List<HistoryTransaction>? history,
-      Meta? meta,
-      required DashboardState state,
-      required DashboardProvider dashboardProvider}) {
+  SingleChildScrollView familyReport(DashboardProvider dashboardProvider) {
+    print(dashboardProvider.familyHistoryExpense.length);
+    print(dashboardProvider.familyHistoryIncome.length);
+    print(
+        "total should be ${dashboardProvider.familyHistoryExpenseMeta?.total}");
+    print(
+        "income total should be ${dashboardProvider.familyHistoryIncomeMeta?.total}");
+
+    print("error meta income ${dashboardProvider.familyHistoryIncomeError}");
+    print("error meta expense ${dashboardProvider.familyHistoryExpenseError}");
+    return SingleChildScrollView(
+        child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Financial Family Tracker"),
+        Row(
+          children: [
+            Expanded(
+                child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    Text("Saldo"),
+                    Text("Rp. ${dashboardProvider.balance ?? "0"}"),
+                  ],
+                ),
+              ),
+            )),
+            Expanded(
+                child: Card(
+              child: Column(
+                children: [
+                  Text("Pemasukan"),
+                  Text("Rp. ${dashboardProvider.totalIncome ?? "0"}"),
+                ],
+              ),
+            )),
+            Expanded(
+                child: Card(
+              child: Column(
+                children: [
+                  Text("Pengeluaran"),
+                  Text("Rp. ${dashboardProvider.totalExpense ?? "0"}"),
+                ],
+              ),
+            )),
+          ],
+        ),
+        familyHistoryTable(
+            dashboardProvider: dashboardProvider,
+            familyHistory: dashboardProvider.familyHistoryExpense,
+            meta: dashboardProvider.familyHistoryExpenseMeta,
+            state: dashboardProvider.familyHistoryExpenseState,
+            type: "familyHistoryExpense"),
+        familyHistoryTable(
+            dashboardProvider: dashboardProvider,
+            familyHistory: dashboardProvider.familyHistoryIncome,
+            meta: dashboardProvider.familyHistoryIncomeMeta,
+            state: dashboardProvider.familyHistoryIncomeState,
+            type: "familyHistoryIncome"),
+      ],
+    ));
+  }
+
+  Card historyTable({
+    List<HistoryTransaction>? history,
+    Meta? meta,
+    required DashboardState state,
+    required DashboardProvider dashboardProvider,
+    required String type,
+  }) {
+    print("meta page ${meta?.page}");
+    print("meta total page ${meta?.totalPages}");
+    bool isFetching = false;
+
     return Card(
       child: Column(
         children: [
@@ -233,8 +311,43 @@ class _DashboardPageState extends State<DashboardPage>
                 if (scrollInfo.metrics.pixels ==
                         scrollInfo.metrics.maxScrollExtent &&
                     (state != DashboardState.loading)) {
-                  if (meta != null && meta!.page < meta!.totalPages) {
-                    dashboardProvider.getHistoryExpense(page: meta!.page + 1);
+                  if (meta != null &&
+                      meta.page < meta.totalPages &&
+                      !isFetching) {
+                    isFetching = true; // Kunci sebelum memulai fetch
+                    setState(() {});
+                    switch (type) {
+                      case "historyExpense":
+                        dashboardProvider
+                            .getHistoryExpense(page: meta.page + 1)
+                            .then((_) {
+                          isFetching = false; // Lepaskan kunci setelah selesai
+                        });
+                        break;
+                      case "historyIncome":
+                        dashboardProvider
+                            .getHistoryIncome(page: meta.page + 1)
+                            .then((_) {
+                          isFetching = false; // Lepaskan kunci setelah selesai
+                        });
+                        break;
+                      case "familyHistoryExpense":
+                        dashboardProvider
+                            .getFamilyHistoryExpense(page: meta.page + 1)
+                            .then((_) {
+                          isFetching = false; // Lepaskan kunci setelah selesai
+                        });
+                        break;
+                      case "familyHistoryIncome":
+                        dashboardProvider
+                            .getFamilyHistoryIncome(page: meta.page + 1)
+                            .then((_) {
+                          isFetching = false; // Lepaskan kunci setelah selesai
+                        });
+                        break;
+                      default:
+                        isFetching = false;
+                    }
                   }
                 }
                 return false;
@@ -253,6 +366,107 @@ class _DashboardPageState extends State<DashboardPage>
                       final index = history!.indexOf(expense) + 1;
                       return DataRow(cells: [
                         DataCell(Text('$index')),
+                        DataCell(Text(expense.description)),
+                        DataCell(Text(expense.category)),
+                        DataCell(Text('Rp. ${expense.amount.toString()}')),
+                        DataCell(Text(
+                            '${expense.transactionAt.toLocal().toString().split(' ')[0]}')),
+                      ]);
+                    }).toList(),
+                    // [
+                    // ],
+                  )
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Card familyHistoryTable(
+      {List<FamilyHistoryTransaction>? familyHistory,
+      Meta? meta,
+      required DashboardState state,
+      required DashboardProvider dashboardProvider,
+      required String type}) {
+    bool isFetching = false;
+
+    return Card(
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text("Rincian Pemasukan"),
+              Text("Rincian Pemasukan"),
+            ],
+          ),
+          SizedBox(
+            height: 400,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (ScrollNotification scrollInfo) {
+                if (scrollInfo.metrics.pixels ==
+                        scrollInfo.metrics.maxScrollExtent &&
+                    (state != DashboardState.loading)) {
+                  if (meta != null &&
+                      meta.page < meta.totalPages &&
+                      !isFetching) {
+                    isFetching = true; // Kunci sebelum memulai fetch
+                    setState(() {});
+                    switch (type) {
+                      case "historyExpense":
+                        dashboardProvider
+                            .getHistoryExpense(page: meta.page + 1)
+                            .then((_) {
+                          isFetching = false; // Lepaskan kunci setelah selesai
+                        });
+                        break;
+                      case "historyIncome":
+                        dashboardProvider
+                            .getHistoryIncome(page: meta.page + 1)
+                            .then((_) {
+                          isFetching = false; // Lepaskan kunci setelah selesai
+                        });
+                        break;
+                      case "familyHistoryExpense":
+                        dashboardProvider
+                            .getFamilyHistoryExpense(page: meta.page + 1)
+                            .then((_) {
+                          isFetching = false; // Lepaskan kunci setelah selesai
+                        });
+                        break;
+                      case "familyHistoryIncome":
+                        dashboardProvider
+                            .getFamilyHistoryIncome(page: meta.page + 1)
+                            .then((_) {
+                          isFetching = false; // Lepaskan kunci setelah selesai
+                        });
+                        break;
+                      default:
+                        isFetching = false;
+                    }
+                  }
+                }
+                return false;
+              },
+              child: ListView(
+                children: [
+                  DataTable(
+                    columns: const [
+                      DataColumn(label: Text('No')),
+                      DataColumn(label: Text('Username')),
+                      DataColumn(label: Text('Keterangan')),
+                      DataColumn(label: Text('Kategori')),
+                      DataColumn(label: Text('Jumlah')),
+                      DataColumn(label: Text('Tanggal')),
+                    ],
+                    rows: familyHistory!.map((expense) {
+                      final index = familyHistory!.indexOf(expense) + 1;
+                      return DataRow(cells: [
+                        DataCell(Text('$index')),
+                        DataCell(Text(expense.member.user.username)),
                         DataCell(Text(expense.description)),
                         DataCell(Text(expense.category)),
                         DataCell(Text('Rp. ${expense.amount.toString()}')),
@@ -707,7 +921,7 @@ class _DashboardPageState extends State<DashboardPage>
               ),
               onTap: () {
                 _pageController.animateToPage(
-                  2,
+                  3,
                   duration: Duration(milliseconds: 1000),
                   curve: Curves.easeInOut,
                 ); //

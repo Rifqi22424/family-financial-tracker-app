@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:financial_family_tracker/features/dashboard/data/models/recent_transaction_response.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/consts/base_url.dart';
+import '../data/models/family_history_trasnsaction_response.dart';
 import '../data/models/history_transaction_response.dart';
 
 class DashboardServices {
@@ -180,6 +181,39 @@ class DashboardServices {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         return HistoryTransactionsResponse.fromJson(responseData);
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw errorData["error"]["message"] ?? "Something went wrong";
+      }
+    } catch (e) {
+      print(e);
+      throw e.toString();
+    }
+  }
+
+  Future<FamilyHistoryTransactionsResponse> getFamilyHistoryTransactions({
+    required String token,
+    int page = 1,
+    int limit = 10,
+    required String transactionType,
+    String timePeriod = "all",
+  }) async {
+    print(token);
+    final url = Uri.parse(
+        "$baseUrl/transaction/history/family?transactionType=$transactionType&timePeriod=$timePeriod&page=$page&limit=$limit");
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return FamilyHistoryTransactionsResponse.fromJson(responseData);
       } else {
         final errorData = jsonDecode(response.body);
         throw errorData["error"]["message"] ?? "Something went wrong";

@@ -73,4 +73,9 @@ class Meta {
       totalPages: json['totalPages'],
     );
   }
+
+  @override
+  String toString() {
+    return 'Meta(page: $page, limit: $limit, total: $total, totalPages: $totalPages)';
+  }
 }

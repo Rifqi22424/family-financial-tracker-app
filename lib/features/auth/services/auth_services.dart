@@ -79,6 +79,44 @@ class AuthService {
     }
   }
 
+  Future<MessageResponse?> changePassword({
+    required String identifier,
+    required String oldPassword,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    final url = Uri.parse('$baseUrl/auth/password');
+    final body = {
+      "identifier": identifier,
+      "oldPassword": oldPassword,
+      "password": password,
+      "confirmPassword": confirmPassword,
+    };
+
+    try {
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+
+      print("Response Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        return MessageResponse.fromJson(responseData);
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw errorData["error"]["message"] ?? "Something went wrong";
+      }
+    } catch (e) {
+      print(e);
+      throw e.toString();
+    }
+  }
+
   Future<VerificationResponse> verifyEmail({
     required String email,
     required String verificationCode,

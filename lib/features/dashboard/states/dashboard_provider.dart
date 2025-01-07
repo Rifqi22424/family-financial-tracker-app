@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:financial_family_tracker/core/utils/shared_preferences_helper.dart';
 import '../../family/data/models/family_member.dart';
 import '../../family/services/family_services.dart';
+import '../data/models/family_history_trasnsaction_response.dart';
 import '../data/models/history_transaction_response.dart';
 import '../data/models/recent_transaction_response.dart';
 import '../services/dashboard_services.dart';
@@ -16,6 +17,8 @@ class DashboardProvider with ChangeNotifier {
   // Separate states for each operation
   DashboardState _balanceState = DashboardState.initial;
   DashboardState _familyMembersState = DashboardState.initial;
+  DashboardState _familyHistoryIncomeState = DashboardState.initial;
+  DashboardState _familyHistoryExpenseState = DashboardState.initial;
   DashboardState _historyIncomeState = DashboardState.initial;
   DashboardState _historyExpenseState = DashboardState.initial;
   DashboardState _recentTransactionsState = DashboardState.initial;
@@ -26,6 +29,8 @@ class DashboardProvider with ChangeNotifier {
   DashboardState _transferState = DashboardState.initial;
 
   // Error messages for each operation
+  String? _familyHistoryIncomeError;
+  String? _familyHistoryExpenseError;
   String? _historyIncomeError;
   String? _historyExpenseError;
   String? _transferError;
@@ -39,6 +44,10 @@ class DashboardProvider with ChangeNotifier {
 
   // Data
   double? _balance;
+  Meta? _familyHistoryExpenseMeta;
+  Meta? _familyHistoryIncomeMeta;
+  List<FamilyHistoryTransaction> _familyHistoryExpense = [];
+  List<FamilyHistoryTransaction> _familyHistoryIncome = [];
   Meta? _historyExpenseMeta;
   Meta? _historyIncomeMeta;
   List<HistoryTransaction> _historyExpense = [];
@@ -49,6 +58,8 @@ class DashboardProvider with ChangeNotifier {
   double? _totalIncome;
 
   // Getters for states
+  DashboardState get familyHistoryIncomeState => _familyHistoryIncomeState;
+  DashboardState get familyHistoryExpenseState => _familyHistoryExpenseState;
   DashboardState get historyIncomeState => _historyIncomeState;
   DashboardState get historyExpenseState => _historyExpenseState;
   DashboardState get balanceState => _balanceState;
@@ -61,6 +72,8 @@ class DashboardProvider with ChangeNotifier {
   DashboardState get addExpenseState => _addExpenseState;
 
   // Getters for error messages
+  String? get familyHistoryExpenseError => _familyHistoryExpenseError;
+  String? get familyHistoryIncomeError => _familyHistoryIncomeError;
   String? get historyExpenseError => _historyExpenseError;
   String? get historyIncomeError => _historyIncomeError;
   String? get transferError => _transferError;
@@ -74,14 +87,21 @@ class DashboardProvider with ChangeNotifier {
 
   // Getters for data
   double? get balance => _balance;
-  List<HistoryTransaction> get historyExpense => _historyExpense;
-  List<HistoryTransaction> get historyIncome => _historyIncome;
   List<FamilyMember> get familyMembers => _familyMembers;
   List<TransactionData> get recentTransactions => _recentTransactions;
   double? get totalExpense => _totalExpense;
   double? get totalIncome => _totalIncome;
+  List<HistoryTransaction> get historyExpense => _historyExpense;
+  List<HistoryTransaction> get historyIncome => _historyIncome;
   Meta? get historyExpenseMeta => _historyExpenseMeta;
   Meta? get historyIncomeMeta => _historyIncomeMeta;
+
+  List<FamilyHistoryTransaction> get familyHistoryExpense =>
+      _familyHistoryExpense;
+  List<FamilyHistoryTransaction> get familyHistoryIncome =>
+      _familyHistoryIncome;
+  Meta? get familyHistoryExpenseMeta => _familyHistoryExpenseMeta;
+  Meta? get familyHistoryIncomeMeta => _familyHistoryIncomeMeta;
 
   Future<void> fetchDashboardData() async {
     try {
@@ -93,6 +113,8 @@ class DashboardProvider with ChangeNotifier {
         getFamilyMembers(),
         getHistoryExpense(),
         getHistoryIncome(),
+        getFamilyHistoryExpense(),
+        getFamilyHistoryIncome(),
       ]);
     } catch (e) {
       print("Error fetching dashboard data: ${e.toString()}");
@@ -125,6 +147,8 @@ class DashboardProvider with ChangeNotifier {
     String transactionType = "EXPENSE",
     String timePeriod = "all",
   }) async {
+    if (_historyExpenseState == DashboardState.loading) return;
+
     if (page == 1) {
       _historyExpenseState = DashboardState.loading;
       _historyExpenseError = null;
@@ -166,6 +190,8 @@ class DashboardProvider with ChangeNotifier {
     String transactionType = "INCOME",
     String timePeriod = "all",
   }) async {
+    if (_historyIncomeState == DashboardState.loading) return;
+
     if (page == 1) {
       _historyIncomeState = DashboardState.loading;
       _historyIncomeError = null;
@@ -196,6 +222,93 @@ class DashboardProvider with ChangeNotifier {
     } catch (e) {
       _historyIncomeError = e.toString();
       _historyIncomeState = DashboardState.error;
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> getFamilyHistoryIncome({
+    int page = 1,
+    int limit = 10,
+    String transactionType = "INCOME",
+    String timePeriod = "all",
+  }) async {
+    if (_familyHistoryIncomeState == DashboardState.loading) return;
+
+    if (page == 1) {
+      _familyHistoryIncomeState = DashboardState.loading;
+      _familyHistoryIncomeError = null;
+      _familyHistoryIncome = [];
+    }
+    notifyListeners();
+
+    try {
+      final String? token = await SharedPreferencesHelper.getAuthToken();
+      if (token == null) throw "Token tidak ditemukan. Silakan login ulang.";
+
+      FamilyHistoryTransactionsResponse response =
+          await _dashboardService.getFamilyHistoryTransactions(
+        token: token,
+        page: page,
+        limit: limit,
+        transactionType: transactionType,
+        timePeriod: timePeriod,
+      );
+
+      if (page == 1) {
+        _familyHistoryIncome = response.data;
+      } else {
+        _familyHistoryIncome.addAll(response.data);
+      }
+      _familyHistoryIncomeMeta = response.meta;
+      _familyHistoryIncomeState = DashboardState.success;
+    } catch (e) {
+      _familyHistoryIncomeError = e.toString();
+      _familyHistoryIncomeState = DashboardState.error;
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> getFamilyHistoryExpense({
+    int page = 1,
+    int limit = 10,
+    String transactionType = "EXPENSE",
+    String timePeriod = "all",
+  }) async {
+    if (_familyHistoryExpenseState == DashboardState.loading) return;
+
+    if (page == 1) {
+      _familyHistoryExpenseState = DashboardState.loading;
+      _familyHistoryExpenseError = null;
+      _familyHistoryExpense = [];
+    }
+    notifyListeners();
+
+    try {
+      final String? token = await SharedPreferencesHelper.getAuthToken();
+      if (token == null) throw "Token tidak ditemukan. Silakan login ulang.";
+
+      FamilyHistoryTransactionsResponse response =
+          await _dashboardService.getFamilyHistoryTransactions(
+        token: token,
+        page: page,
+        limit: limit,
+        transactionType: transactionType,
+        timePeriod: timePeriod,
+      );
+
+      if (page == 1) {
+        _familyHistoryExpense = response.data;
+      } else {
+        _familyHistoryExpense.addAll(response.data);
+      }
+      _familyHistoryExpenseMeta = response.meta;
+      print("meta expense ${response.meta.toString()}");
+      _familyHistoryExpenseState = DashboardState.success;
+    } catch (e) {
+      _familyHistoryExpenseError = e.toString();
+      _familyHistoryExpenseState = DashboardState.error;
     } finally {
       notifyListeners();
     }
