@@ -1,3 +1,4 @@
+import 'package:financial_family_tracker/core/consts/app_padding.dart';
 import 'package:flutter/material.dart';
 
 class AuthFormField extends StatelessWidget {
@@ -15,10 +16,13 @@ class AuthFormField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      decoration: InputDecoration(labelText: _labelText),
-      controller: _controller,
-      validator: validator,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal:  AppPadding.medium, vertical: AppPadding.small),
+      child: TextFormField(
+        decoration: InputDecoration(labelText: _labelText),
+        controller: _controller,
+        validator: validator,
+      ),
     );
   }
 }

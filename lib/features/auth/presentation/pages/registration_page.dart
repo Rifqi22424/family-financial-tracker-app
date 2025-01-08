@@ -2,6 +2,7 @@ import 'package:financial_family_tracker/features/auth/data/models/arguments/ema
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/consts/app_padding.dart';
 import '../../../../core/consts/image_routes.dart';
 import '../../states/registration_provider.dart';
 import '../widgets/form_field_registration.dart';
@@ -98,7 +99,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
                     },
                   ),
                 ],
-              )
+              ),
+              SizedBox(height: AppPadding.medium),
             ],
           ),
         ),

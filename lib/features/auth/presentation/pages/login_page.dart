@@ -1,3 +1,4 @@
+import 'package:financial_family_tracker/core/consts/app_padding.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/consts/image_routes.dart';
@@ -79,7 +80,8 @@ class _LoginPageState extends State<LoginPage> {
                     },
                   ),
                 ],
-              )
+              ),
+              SizedBox(height: AppPadding.medium),
             ],
           ),
         ),

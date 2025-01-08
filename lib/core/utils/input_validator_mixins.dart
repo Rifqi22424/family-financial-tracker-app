@@ -15,4 +15,18 @@ mixin InputValidatorMixin {
     }
     return null;
   }
+
+  String? validateConfirmPassword({
+    required String? confirmPassword,
+    required String newPassword,
+    String fieldName = "Konfirmasi Password",
+  }) {
+    if (confirmPassword == null || confirmPassword.isEmpty) {
+      return "$fieldName tidak boleh kosong";
+    }
+    if (confirmPassword != newPassword) {
+      return "$fieldName tidak sesuai dengan password baru";
+    }
+    return null;
+  }
 }

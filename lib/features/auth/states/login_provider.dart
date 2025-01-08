@@ -30,8 +30,10 @@ class LoginProvider with ChangeNotifier {
 
       _loginResponse = response;
       String token = _loginResponse?.token ?? "";
+      String email = _loginResponse?.user.email ?? "";
 
       await SharedPreferencesHelper.setAuthToken(token);
+      await SharedPreferencesHelper.setEmail(email);
       _state = LoginState.success;
     } catch (e) {
       _errorMessage = e.toString(); // Hapus prefix "Exception: "

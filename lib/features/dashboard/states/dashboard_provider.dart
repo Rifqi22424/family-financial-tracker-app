@@ -11,7 +11,6 @@ enum DashboardState { initial, loading, success, error }
 
 class DashboardProvider with ChangeNotifier {
   final DashboardServices _dashboardService = DashboardServices();
-
   final FamilyService _familyService = FamilyService();
 
   // Separate states for each operation
@@ -142,11 +141,16 @@ class DashboardProvider with ChangeNotifier {
   }
 
   Future<void> getHistoryExpense({
+    int? month,
+    int? year,
     int page = 1,
     int limit = 10,
     String transactionType = "EXPENSE",
     String timePeriod = "all",
   }) async {
+    month ??= DateTime.now().month;
+    year ??= DateTime.now().year;
+
     if (_historyExpenseState == DashboardState.loading) return;
 
     if (page == 1) {
@@ -167,6 +171,8 @@ class DashboardProvider with ChangeNotifier {
         limit: limit,
         transactionType: transactionType,
         timePeriod: timePeriod,
+        month: month,
+        year: year,
       );
 
       if (page == 1) {
@@ -185,11 +191,15 @@ class DashboardProvider with ChangeNotifier {
   }
 
   Future<void> getHistoryIncome({
+    int? month,
+    int? year,
     int page = 1,
     int limit = 10,
     String transactionType = "INCOME",
     String timePeriod = "all",
   }) async {
+    month ??= DateTime.now().month;
+    year ??= DateTime.now().year;
     if (_historyIncomeState == DashboardState.loading) return;
 
     if (page == 1) {
@@ -205,12 +215,13 @@ class DashboardProvider with ChangeNotifier {
 
       HistoryTransactionsResponse response =
           await _dashboardService.getHistoryTransactions(
-        token: token,
-        page: page,
-        limit: limit,
-        transactionType: transactionType,
-        timePeriod: timePeriod,
-      );
+              token: token,
+              page: page,
+              limit: limit,
+              transactionType: transactionType,
+              timePeriod: timePeriod,
+              month: month,
+              year: year);
 
       if (page == 1) {
         _historyIncome = response.data;
@@ -228,11 +239,15 @@ class DashboardProvider with ChangeNotifier {
   }
 
   Future<void> getFamilyHistoryIncome({
+    int? month,
+    int? year,
     int page = 1,
     int limit = 10,
     String transactionType = "INCOME",
-    String timePeriod = "all",
   }) async {
+    month ??= DateTime.now().month;
+    year ??= DateTime.now().year;
+
     if (_familyHistoryIncomeState == DashboardState.loading) return;
 
     if (page == 1) {
@@ -252,7 +267,8 @@ class DashboardProvider with ChangeNotifier {
         page: page,
         limit: limit,
         transactionType: transactionType,
-        timePeriod: timePeriod,
+        month: month,
+        year: year,
       );
 
       if (page == 1) {
@@ -272,10 +288,13 @@ class DashboardProvider with ChangeNotifier {
 
   Future<void> getFamilyHistoryExpense({
     int page = 1,
+    int? month,
+    int? year,
     int limit = 10,
     String transactionType = "EXPENSE",
-    String timePeriod = "all",
   }) async {
+    month ??= DateTime.now().month;
+    year ??= DateTime.now().year;
     if (_familyHistoryExpenseState == DashboardState.loading) return;
 
     if (page == 1) {
@@ -295,7 +314,8 @@ class DashboardProvider with ChangeNotifier {
         page: page,
         limit: limit,
         transactionType: transactionType,
-        timePeriod: timePeriod,
+        month: month,
+        year: year
       );
 
       if (page == 1) {

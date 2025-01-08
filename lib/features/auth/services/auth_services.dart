@@ -45,14 +45,14 @@ class AuthService {
     required String username,
     required String email,
     required String password,
-    required String confirmPassword,
+    required String confirmNewPassword,
   }) async {
     final url = Uri.parse('$baseUrl/auth/register');
     final body = {
       "username": username,
       "email": email,
       "password": password,
-      "confirmPassword": confirmPassword,
+      "confirmPassword": confirmNewPassword,
     };
 
     try {
@@ -82,15 +82,15 @@ class AuthService {
   Future<MessageResponse?> changePassword({
     required String identifier,
     required String oldPassword,
-    required String password,
-    required String confirmPassword,
+    required String newPassword,
+    required String confirmNewPassword,
   }) async {
     final url = Uri.parse('$baseUrl/auth/password');
     final body = {
       "identifier": identifier,
       "oldPassword": oldPassword,
-      "password": password,
-      "confirmPassword": confirmPassword,
+      "newPassword": newPassword,
+      "confirmNewPassword": confirmNewPassword,
     };
 
     try {

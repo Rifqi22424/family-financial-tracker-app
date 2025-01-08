@@ -1,14 +1,21 @@
+import 'package:financial_family_tracker/core/consts/app_padding.dart';
 import 'package:financial_family_tracker/core/utils/input_validator_mixins.dart';
+import 'package:financial_family_tracker/core/utils/shared_preferences_helper.dart';
 import 'package:financial_family_tracker/features/auth/presentation/widgets/form_field_registration.dart';
 import 'package:financial_family_tracker/features/dashboard/data/models/history_transaction_response.dart';
 import 'package:financial_family_tracker/features/dashboard/states/dashboard_provider.dart';
 import 'package:financial_family_tracker/features/dashboard/widgets/date_picker.dart';
+import 'package:financial_family_tracker/features/dashboard/widgets/family_scrollable_data_table.dart';
 import 'package:flutter/material.dart';
+import 'package:month_year_picker/month_year_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/consts/app_colors.dart';
+import '../../../core/consts/image_routes.dart';
+import '../../auth/states/password_provider.dart';
 import '../data/models/family_history_trasnsaction_response.dart';
 import '../data/models/recent_transaction_response.dart';
+import '../widgets/scrollable_data_table.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -22,6 +29,7 @@ class _DashboardPageState extends State<DashboardPage>
   final GlobalKey<FormState> _expenseKey = GlobalKey<FormState>();
   final GlobalKey<FormState> _incomeKey = GlobalKey<FormState>();
   final GlobalKey<FormState> _transferKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _changePasswordKey = GlobalKey<FormState>();
 
   DateTime? expenseAt;
   DateTime? incomeAt;
@@ -38,7 +46,97 @@ class _DashboardPageState extends State<DashboardPage>
   TextEditingController _transferTotalController = TextEditingController();
   TextEditingController _transferDescController = TextEditingController();
 
+  TextEditingController _oldPasswordChangePasswordController =
+      TextEditingController();
+  TextEditingController _newPasswordChangePasswordController =
+      TextEditingController();
+  TextEditingController _confirmNewPasswordChangePasswordController =
+      TextEditingController();
+
+  int incomeSelectedMonth = DateTime.now().month;
+  int incomeSelectedYear = DateTime.now().year;
+
+  int expenseSelectedMonth = DateTime.now().month;
+  int expenseSelectedYear = DateTime.now().year;
+
+  int familyIncomeSelectedMonth = DateTime.now().month;
+  int familyIncomeSelectedYear = DateTime.now().year;
+
+  int familyExpenseSelectedMonth = DateTime.now().month;
+  int familyExpenseSelectedYear = DateTime.now().year;
+
   late PageController _pageController;
+
+  Future<void> _pickMonthYear(
+      String type, DashboardProvider dashboardProvider) async {
+    final now = DateTime.now();
+    int selectedMonth = now.month;
+    int selectedYear = now.year;
+
+    // Tentukan nilai awal berdasarkan tipe
+    switch (type) {
+      case 'income':
+        selectedMonth = incomeSelectedMonth;
+        selectedYear = incomeSelectedYear;
+        break;
+      case 'expense':
+        selectedMonth = expenseSelectedMonth;
+        selectedYear = expenseSelectedYear;
+        break;
+      case 'familyIncome':
+        selectedMonth = familyIncomeSelectedMonth;
+        selectedYear = familyIncomeSelectedYear;
+        break;
+      case 'familyExpense':
+        selectedMonth = familyExpenseSelectedMonth;
+        selectedYear = familyExpenseSelectedYear;
+        break;
+      default:
+        throw Exception('Invalid type');
+    }
+
+    // Tampilkan picker bulan dan tahun
+    final pickedDate = await showMonthYearPicker(
+      context: context,
+      initialDate: DateTime(selectedYear, selectedMonth),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate != null) {
+      setState(() {
+        // Set nilai bulan dan tahun berdasarkan tipe
+        switch (type) {
+          case 'income':
+            incomeSelectedMonth = pickedDate.month;
+            incomeSelectedYear = pickedDate.year;
+            dashboardProvider.getHistoryIncome(
+                month: incomeSelectedMonth, year: incomeSelectedYear);
+            break;
+          case 'expense':
+            expenseSelectedMonth = pickedDate.month;
+            expenseSelectedYear = pickedDate.year;
+            dashboardProvider.getHistoryExpense(
+                month: expenseSelectedMonth, year: expenseSelectedYear);
+            break;
+          case 'familyIncome':
+            familyIncomeSelectedMonth = pickedDate.month;
+            familyIncomeSelectedYear = pickedDate.year;
+            dashboardProvider.getFamilyHistoryIncome(
+                month: familyIncomeSelectedMonth,
+                year: familyIncomeSelectedYear);
+            break;
+          case 'familyExpense':
+            familyExpenseSelectedMonth = pickedDate.month;
+            familyExpenseSelectedYear = pickedDate.year;
+            dashboardProvider.getFamilyHistoryExpense(
+                month: familyExpenseSelectedMonth,
+                year: familyExpenseSelectedYear);
+            break;
+        }
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -61,13 +159,13 @@ class _DashboardPageState extends State<DashboardPage>
       print(
           "recent transaction ${dashboardProvider.recentTransactions.toString()}");
       return LayoutBuilder(builder: (context, constraints) {
-        // Jika lebar layar lebih dari 600px, tampilkan sidebar.
-        final bool isWideScreen = constraints.maxWidth > 600;
+        // Jika lebar layar lebih dari 800px, tampilkan sidebar.
+        final bool isWideScreen = constraints.maxWidth > 800;
         return Scaffold(
           appBar: isWideScreen
               ? null
               : AppBar(
-                  title: Text("AooA"),
+                  title: Text("Financial Family Tracker"),
                 ),
           body: Row(
             children: [
@@ -82,9 +180,7 @@ class _DashboardPageState extends State<DashboardPage>
                     main(dashboardProvider, context),
                     personalReport(dashboardProvider),
                     familyReport(dashboardProvider),
-                    Container(
-                      child: Center(child: Text("Setting")),
-                    ),
+                    setting(context),
                   ],
                 ),
               ),
@@ -98,56 +194,223 @@ class _DashboardPageState extends State<DashboardPage>
     });
   }
 
+  setting(BuildContext context) {
+    return Consumer<PasswordProvider>(
+        builder: (context, passwordProvider, child) {
+      return SingleChildScrollView(
+        child: Form(
+          key: _changePasswordKey,
+          child: Padding(
+            padding: const EdgeInsets.all(AppPadding.medium),
+            child: Column(
+              children: [
+                Card(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(AppPadding.large),
+                        child: Text("Ubah Password",
+                            style: Theme.of(context).textTheme.headlineSmall),
+                      ),
+                      AuthFormField(
+                        controller: _oldPasswordChangePasswordController,
+                        labelText: "Masukan Password Lama",
+                        validator: (value) =>
+                            validateText(value, "Password Lama"),
+                      ),
+                      AuthFormField(
+                        controller: _newPasswordChangePasswordController,
+                        labelText: "Masukan Password Baru",
+                        validator: (value) =>
+                            validateText(value, "Password Baru"),
+                      ),
+                      AuthFormField(
+                        controller: _confirmNewPasswordChangePasswordController,
+                        labelText: "Masukan Konfirmasi Password Baru",
+                        validator: (value) => validateConfirmPassword(
+                          confirmPassword: value,
+                          newPassword:
+                              _newPasswordChangePasswordController.text,
+                        ),
+                      ),
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            if (_changePasswordKey.currentState?.validate() ??
+                                false) {
+                              String email =
+                                  await SharedPreferencesHelper.getEmail() ??
+                                      "";
+                              final String oldPassword =
+                                  _oldPasswordChangePasswordController.text;
+                              final String newPassword =
+                                  _newPasswordChangePasswordController.text;
+                              final String confirmPassword =
+                                  _confirmNewPasswordChangePasswordController
+                                      .text;
+
+                              // Cetak semua variabel
+                              print("Identifier: $email");
+                              print("Old Password: $oldPassword");
+                              print("New Password: $newPassword");
+                              print("Confirm Password: $confirmPassword");
+
+                              try {
+                                // Panggil metode changePassword
+                                await context
+                                    .read<PasswordProvider>()
+                                    .changePassword(
+                                      identifier: email,
+                                      oldPassword: oldPassword,
+                                      newPassword: newPassword,
+                                      confirmNewPassword: confirmPassword,
+                                    );
+
+                                final state = passwordProvider.state;
+                                if (state == PasswordState.success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content:
+                                            Text("Password berhasil diubah!")),
+                                  );
+                                  _oldPasswordChangePasswordController.clear();
+                                  _newPasswordChangePasswordController.clear();
+                                  _confirmNewPasswordChangePasswordController
+                                      .clear();
+                                } else if (state == PasswordState.error) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(
+                                            passwordProvider.errorMessage ??
+                                                "Terjadi kesalahan")),
+                                  );
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text("Terjadi kesalahan: $e")),
+                                );
+                              }
+                            }
+                          },
+                          child: Text("Simpan"),
+                        ),
+                      ),
+                      SizedBox(height: AppPadding.medium),
+                    ],
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton(
+                      onPressed: _showLogOutDialog, child: Text("Log Out")),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  void _showLogOutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Konfirmasi"),
+          content: Text("Apakah anda yakin ingin logout akun?"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Tutup dialog
+              },
+              child: const Text("Tidak"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await SharedPreferencesHelper.clearAll();
+                Navigator.pushNamedAndRemoveUntil(
+                    context, "/login", (Route<dynamic> route) => false);
+              },
+              child: const Text("Ya"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Drawer drawer() {
     return Drawer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DrawerHeader(
-            child: Text(
-              "Menu",
-              style: TextStyle(color: Colors.white, fontSize: 18),
-            ),
-            decoration: BoxDecoration(
-              color: Colors.blue,
-            ),
+            child: Image.asset(ImageRoutes.appLogo, width: 50, height: 50),
           ),
           ListTile(
-            leading: Icon(Icons.home),
-            title: Text("Home"),
+            leading: Icon(Icons.home, color: Colors.orange),
+            title: Text(
+              "Home",
+            ),
             onTap: () {
               _pageController.animateToPage(
                 0,
                 duration: Duration(milliseconds: 1000),
                 curve: Curves.easeInOut,
-              ); // Pindah ke halaman ketiga
-              Navigator.pop(context);
-              // Navigasi atau aksi lainnya
+              ); // Pindah ke halaman pertama
             },
           ),
-          ListTile(
-            leading: Icon(Icons.home),
-            title: Text("Home"),
-            onTap: () {
-              _pageController.animateToPage(
-                1,
-                duration: Duration(milliseconds: 1000),
-                curve: Curves.easeInOut,
-              ); // Pindah ke h              Navigator.pop(context);
-              // Navigasi atau aksi lainnya
-            },
+          ExpansionTile(
+            shape: Border(),
+            title: Text("Laporan"),
+            children: [
+              ListTile(
+                leading:
+                    Icon(Icons.self_improvement_rounded, color: Colors.orange),
+                title: Text(
+                  "Pribadi",
+                ),
+                onTap: () {
+                  // Navigasi atau aksi lainnya
+                  _pageController.animateToPage(
+                    1,
+                    duration: Duration(milliseconds: 1000),
+                    curve: Curves.easeInOut,
+                  ); //
+                },
+              ),
+              ListTile(
+                leading:
+                    Icon(Icons.family_restroom_rounded, color: Colors.orange),
+                title: Text(
+                  "Keluarga",
+                ),
+                onTap: () {
+                  // Navigasi atau aksi lainnya
+                  _pageController.animateToPage(
+                    2,
+                    duration: Duration(milliseconds: 1000),
+                    curve: Curves.easeInOut,
+                  ); //
+                },
+              ),
+            ],
           ),
           ListTile(
-            leading: Icon(Icons.settings),
-            title: Text("Settings"),
+            leading: Icon(Icons.settings, color: Colors.orange),
+            title: Text(
+              "Settings",
+            ),
             onTap: () {
               _pageController.animateToPage(
-                2,
+                3,
                 duration: Duration(milliseconds: 1000),
                 curve: Curves.easeInOut,
-              ); // Pindah ke h              Navigator.pop(context);
-
-              // Navigasi atau aksi lainnya
+              ); //
             },
           ),
         ],
@@ -163,45 +426,50 @@ class _DashboardPageState extends State<DashboardPage>
 
     print("error meta income ${dashboardProvider.historyIncomeError}");
     print("error meta expense ${dashboardProvider.historyExpenseError}");
+    bool isWideScreen = MediaQuery.of(context).size.width > 800;
+
     return SingleChildScrollView(
         child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Financial Family Tracker"),
-        Row(
-          children: [
-            Expanded(
-                child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    Text("Saldo"),
-                    Text("Rp. ${dashboardProvider.balance ?? "0"}"),
-                  ],
-                ),
-              ),
-            )),
-            Expanded(
-                child: Card(
-              child: Column(
-                children: [
-                  Text("Pemasukan"),
-                  Text("Rp. ${dashboardProvider.totalIncome ?? "0"}"),
-                ],
-              ),
-            )),
-            Expanded(
-                child: Card(
-              child: Column(
-                children: [
-                  Text("Pengeluaran"),
-                  Text("Rp. ${dashboardProvider.totalExpense ?? "0"}"),
-                ],
-              ),
-            )),
-          ],
+        Padding(
+          padding: const EdgeInsets.all(AppPadding.large),
+          child: Text("Laporan Pribadi",
+              style: Theme.of(context).textTheme.headlineLarge),
         ),
+        isWideScreen
+            ? Row(
+                children: [
+                  moneyCard(
+                      title: "Saldo",
+                      balance: dashboardProvider.balance,
+                      isWideScreen: isWideScreen),
+                  moneyCard(
+                      title: "Pemasukan",
+                      balance: dashboardProvider.totalIncome,
+                      isWideScreen: isWideScreen),
+                  moneyCard(
+                      title: "Pengeluaran",
+                      balance: dashboardProvider.totalExpense,
+                      isWideScreen: isWideScreen),
+                ],
+              )
+            : Column(
+                children: [
+                  moneyCard(
+                      title: "Saldo",
+                      balance: dashboardProvider.balance,
+                      isWideScreen: isWideScreen),
+                  moneyCard(
+                      title: "Pemasukan",
+                      balance: dashboardProvider.totalIncome,
+                      isWideScreen: isWideScreen),
+                  moneyCard(
+                      title: "Pengeluaran",
+                      balance: dashboardProvider.totalExpense,
+                      isWideScreen: isWideScreen),
+                ],
+              ),
         historyTable(
             dashboardProvider: dashboardProvider,
             history: dashboardProvider.historyExpense,
@@ -218,6 +486,48 @@ class _DashboardPageState extends State<DashboardPage>
     ));
   }
 
+  moneyCard(
+      {double? balance, required String title, required bool isWideScreen}) {
+    return isWideScreen
+        ? Expanded(
+            child: Padding(
+            padding: EdgeInsets.all(AppPadding.large),
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(AppPadding.card),
+                child: Column(
+                  children: [
+                    Text(title,
+                        style: Theme.of(context).textTheme.headlineSmall),
+                    Text("Rp. ${balance ?? "0"}"),
+                  ],
+                ),
+              ),
+            ),
+          ))
+        : Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppPadding.small),
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(AppPadding.large),
+                      child: Column(
+                        children: [
+                          Text(title,
+                              style: Theme.of(context).textTheme.headlineSmall),
+                          Text("Rp. ${balance ?? "0"}"),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+  }
+
   SingleChildScrollView familyReport(DashboardProvider dashboardProvider) {
     print(dashboardProvider.familyHistoryExpense.length);
     print(dashboardProvider.familyHistoryIncome.length);
@@ -228,45 +538,50 @@ class _DashboardPageState extends State<DashboardPage>
 
     print("error meta income ${dashboardProvider.familyHistoryIncomeError}");
     print("error meta expense ${dashboardProvider.familyHistoryExpenseError}");
+    bool isWideScreen = MediaQuery.of(context).size.width > 800;
+
     return SingleChildScrollView(
         child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Financial Family Tracker"),
-        Row(
-          children: [
-            Expanded(
-                child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    Text("Saldo"),
-                    Text("Rp. ${dashboardProvider.balance ?? "0"}"),
-                  ],
-                ),
-              ),
-            )),
-            Expanded(
-                child: Card(
-              child: Column(
-                children: [
-                  Text("Pemasukan"),
-                  Text("Rp. ${dashboardProvider.totalIncome ?? "0"}"),
-                ],
-              ),
-            )),
-            Expanded(
-                child: Card(
-              child: Column(
-                children: [
-                  Text("Pengeluaran"),
-                  Text("Rp. ${dashboardProvider.totalExpense ?? "0"}"),
-                ],
-              ),
-            )),
-          ],
+        Padding(
+          padding: const EdgeInsets.all(AppPadding.large),
+          child: Text("Laporan Keluarga",
+              style: Theme.of(context).textTheme.headlineLarge),
         ),
+        isWideScreen
+            ? Row(
+                children: [
+                  moneyCard(
+                      title: "Saldo",
+                      balance: dashboardProvider.balance,
+                      isWideScreen: isWideScreen),
+                  moneyCard(
+                      title: "Pemasukan",
+                      balance: dashboardProvider.totalIncome,
+                      isWideScreen: isWideScreen),
+                  moneyCard(
+                      title: "Pengeluaran",
+                      balance: dashboardProvider.totalExpense,
+                      isWideScreen: isWideScreen),
+                ],
+              )
+            : Column(
+                children: [
+                  moneyCard(
+                      title: "Saldo",
+                      balance: dashboardProvider.balance,
+                      isWideScreen: isWideScreen),
+                  moneyCard(
+                      title: "Pemasukan",
+                      balance: dashboardProvider.totalIncome,
+                      isWideScreen: isWideScreen),
+                  moneyCard(
+                      title: "Pengeluaran",
+                      balance: dashboardProvider.totalExpense,
+                      isWideScreen: isWideScreen),
+                ],
+              ),
         familyHistoryTable(
             dashboardProvider: dashboardProvider,
             familyHistory: dashboardProvider.familyHistoryExpense,
@@ -283,8 +598,8 @@ class _DashboardPageState extends State<DashboardPage>
     ));
   }
 
-  Card historyTable({
-    List<HistoryTransaction>? history,
+  historyTable({
+    required List<HistoryTransaction> history,
     Meta? meta,
     required DashboardState state,
     required DashboardProvider dashboardProvider,
@@ -293,195 +608,289 @@ class _DashboardPageState extends State<DashboardPage>
     print("meta page ${meta?.page}");
     print("meta total page ${meta?.totalPages}");
     bool isFetching = false;
+    bool isWideScreen = MediaQuery.of(context).size.width > 800;
 
-    return Card(
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("Rincian Pemasukan"),
-              Text("Rincian Pemasukan"),
-            ],
-          ),
-          SizedBox(
-            height: 400,
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (ScrollNotification scrollInfo) {
-                if (scrollInfo.metrics.pixels ==
-                        scrollInfo.metrics.maxScrollExtent &&
-                    (state != DashboardState.loading)) {
-                  if (meta != null &&
-                      meta.page < meta.totalPages &&
-                      !isFetching) {
-                    isFetching = true; // Kunci sebelum memulai fetch
-                    setState(() {});
-                    switch (type) {
-                      case "historyExpense":
-                        dashboardProvider
-                            .getHistoryExpense(page: meta.page + 1)
-                            .then((_) {
-                          isFetching = false; // Lepaskan kunci setelah selesai
-                        });
-                        break;
-                      case "historyIncome":
-                        dashboardProvider
-                            .getHistoryIncome(page: meta.page + 1)
-                            .then((_) {
-                          isFetching = false; // Lepaskan kunci setelah selesai
-                        });
-                        break;
-                      case "familyHistoryExpense":
-                        dashboardProvider
-                            .getFamilyHistoryExpense(page: meta.page + 1)
-                            .then((_) {
-                          isFetching = false; // Lepaskan kunci setelah selesai
-                        });
-                        break;
-                      case "familyHistoryIncome":
-                        dashboardProvider
-                            .getFamilyHistoryIncome(page: meta.page + 1)
-                            .then((_) {
-                          isFetching = false; // Lepaskan kunci setelah selesai
-                        });
-                        break;
-                      default:
-                        isFetching = false;
-                    }
-                  }
-                }
-                return false;
-              },
-              child: ListView(
+    return Padding(
+      padding: const EdgeInsets.all(AppPadding.large),
+      child: Card(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppPadding.large),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  DataTable(
-                    columns: const [
-                      DataColumn(label: Text('No')),
-                      DataColumn(label: Text('Keterangan')),
-                      DataColumn(label: Text('Kategori')),
-                      DataColumn(label: Text('Jumlah')),
-                      DataColumn(label: Text('Tanggal')),
-                    ],
-                    rows: history!.map((expense) {
-                      final index = history!.indexOf(expense) + 1;
-                      return DataRow(cells: [
-                        DataCell(Text('$index')),
-                        DataCell(Text(expense.description)),
-                        DataCell(Text(expense.category)),
-                        DataCell(Text('Rp. ${expense.amount.toString()}')),
-                        DataCell(Text(
-                            '${expense.transactionAt.toLocal().toString().split(' ')[0]}')),
-                      ]);
-                    }).toList(),
-                    // [
-                    // ],
-                  )
+                  Padding(
+                    padding: const EdgeInsets.only(left: AppPadding.large),
+                    child: (type == "historyExpense")
+                        ? Text("Rincian Pengeluaran",
+                            style: Theme.of(context).textTheme.headlineSmall)
+                        : Text("Rincian Pemasukan",
+                            style: Theme.of(context).textTheme.headlineSmall),
+                  ),
+                  if (type == "historyExpense")
+                    Padding(
+                      padding: EdgeInsets.only(right: AppPadding.large),
+                      child: ElevatedButton(
+                          onPressed: () =>
+                              _pickMonthYear("expense", dashboardProvider),
+                          child: Text(
+                              "$expenseSelectedMonth/$expenseSelectedYear")),
+                    )
+                  else
+                    Padding(
+                      padding: EdgeInsets.only(right: AppPadding.large),
+                      child: ElevatedButton(
+                          onPressed: () =>
+                              _pickMonthYear("income", dashboardProvider),
+                          child:
+                              Text("$incomeSelectedMonth/$incomeSelectedYear")),
+                    )
                 ],
               ),
             ),
-          ),
-        ],
+            SizedBox(
+              height: 400,
+              child: history.isNotEmpty
+                  ? NotificationListener<ScrollNotification>(
+                      onNotification: (ScrollNotification scrollInfo) {
+                        if (scrollInfo.metrics.pixels ==
+                                scrollInfo.metrics.maxScrollExtent &&
+                            (state != DashboardState.loading)) {
+                          if (meta != null &&
+                              meta.page < meta.totalPages &&
+                              !isFetching) {
+                            isFetching = true;
+                            setState(() {});
+                            switch (type) {
+                              case "historyExpense":
+                                dashboardProvider
+                                    .getHistoryExpense(page: meta.page + 1)
+                                    .then((_) {
+                                  isFetching =
+                                      false; // Lepaskan kunci setelah selesai
+                                });
+                                break;
+                              case "historyIncome":
+                                dashboardProvider
+                                    .getHistoryIncome(page: meta.page + 1)
+                                    .then((_) {
+                                  isFetching =
+                                      false; // Lepaskan kunci setelah selesai
+                                });
+                                break;
+                              case "familyHistoryExpense":
+                                dashboardProvider
+                                    .getFamilyHistoryExpense(
+                                        page: meta.page + 1)
+                                    .then((_) {
+                                  isFetching =
+                                      false; // Lepaskan kunci setelah selesai
+                                });
+                                break;
+                              case "familyHistoryIncome":
+                                dashboardProvider
+                                    .getFamilyHistoryIncome(page: meta.page + 1)
+                                    .then((_) {
+                                  isFetching =
+                                      false; // Lepaskan kunci setelah selesai
+                                });
+                                break;
+                              default:
+                                isFetching = false;
+                            }
+                          }
+                        }
+                        return false;
+                      },
+                      child: isWideScreen
+                          ? ListView(
+                              children: [
+                                DataTable(
+                                  columns: const [
+                                    DataColumn(label: Text('No')),
+                                    DataColumn(label: Text('Keterangan')),
+                                    DataColumn(label: Text('Kategori')),
+                                    DataColumn(label: Text('Jumlah')),
+                                    DataColumn(label: Text('Tanggal')),
+                                  ],
+                                  rows: history!.map((expense) {
+                                    final index = history!.indexOf(expense) + 1;
+                                    return DataRow(cells: [
+                                      DataCell(Text('$index')),
+                                      DataCell(Text(expense.description)),
+                                      DataCell(Text(expense.category)),
+                                      DataCell(Text(
+                                          'Rp. ${expense.amount.toString()}')),
+                                      DataCell(Text(
+                                          '${expense.transactionAt.toLocal().toString().split(' ')[0]}')),
+                                    ]);
+                                  }).toList(),
+                                  // [
+                                  // ],
+                                )
+                              ],
+                            )
+                          : ListView(
+                              children: [
+                                ScrollableDataTable(history: history!),
+                              ],
+                            ),
+                    )
+                  : Center(
+                      child: Text("Belum ada transaksi di bulan ini"),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Card familyHistoryTable(
-      {List<FamilyHistoryTransaction>? familyHistory,
+  familyHistoryTable(
+      {required List<FamilyHistoryTransaction> familyHistory,
       Meta? meta,
       required DashboardState state,
       required DashboardProvider dashboardProvider,
       required String type}) {
     bool isFetching = false;
+        bool isWideScreen = MediaQuery.of(context).size.width > 800;
 
-    return Card(
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("Rincian Pemasukan"),
-              Text("Rincian Pemasukan"),
-            ],
-          ),
-          SizedBox(
-            height: 400,
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (ScrollNotification scrollInfo) {
-                if (scrollInfo.metrics.pixels ==
-                        scrollInfo.metrics.maxScrollExtent &&
-                    (state != DashboardState.loading)) {
-                  if (meta != null &&
-                      meta.page < meta.totalPages &&
-                      !isFetching) {
-                    isFetching = true; // Kunci sebelum memulai fetch
-                    setState(() {});
-                    switch (type) {
-                      case "historyExpense":
-                        dashboardProvider
-                            .getHistoryExpense(page: meta.page + 1)
-                            .then((_) {
-                          isFetching = false; // Lepaskan kunci setelah selesai
-                        });
-                        break;
-                      case "historyIncome":
-                        dashboardProvider
-                            .getHistoryIncome(page: meta.page + 1)
-                            .then((_) {
-                          isFetching = false; // Lepaskan kunci setelah selesai
-                        });
-                        break;
-                      case "familyHistoryExpense":
-                        dashboardProvider
-                            .getFamilyHistoryExpense(page: meta.page + 1)
-                            .then((_) {
-                          isFetching = false; // Lepaskan kunci setelah selesai
-                        });
-                        break;
-                      case "familyHistoryIncome":
-                        dashboardProvider
-                            .getFamilyHistoryIncome(page: meta.page + 1)
-                            .then((_) {
-                          isFetching = false; // Lepaskan kunci setelah selesai
-                        });
-                        break;
-                      default:
-                        isFetching = false;
-                    }
-                  }
-                }
-                return false;
-              },
-              child: ListView(
+
+    return Padding(
+      padding: const EdgeInsets.all(AppPadding.large),
+      child: Card(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppPadding.large),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  DataTable(
-                    columns: const [
-                      DataColumn(label: Text('No')),
-                      DataColumn(label: Text('Username')),
-                      DataColumn(label: Text('Keterangan')),
-                      DataColumn(label: Text('Kategori')),
-                      DataColumn(label: Text('Jumlah')),
-                      DataColumn(label: Text('Tanggal')),
-                    ],
-                    rows: familyHistory!.map((expense) {
-                      final index = familyHistory!.indexOf(expense) + 1;
-                      return DataRow(cells: [
-                        DataCell(Text('$index')),
-                        DataCell(Text(expense.member.user.username)),
-                        DataCell(Text(expense.description)),
-                        DataCell(Text(expense.category)),
-                        DataCell(Text('Rp. ${expense.amount.toString()}')),
-                        DataCell(Text(
-                            '${expense.transactionAt.toLocal().toString().split(' ')[0]}')),
-                      ]);
-                    }).toList(),
-                    // [
-                    // ],
-                  )
+                  Padding(
+                    padding: EdgeInsets.only(left: AppPadding.large),
+                    child: (type == "familyHistoryExpense")
+                        ? Text("Rincian Pengeluaran",
+                            style: Theme.of(context).textTheme.headlineSmall)
+                        : Text("Rincian Pemasukan",
+                            style: Theme.of(context).textTheme.headlineSmall),
+                  ),
+                  if (type == "familyHistoryExpense")
+                    Padding(
+                      padding: EdgeInsets.only(right: AppPadding.large),
+                      child: ElevatedButton(
+                          onPressed: () => _pickMonthYear(
+                              "familyExpense", dashboardProvider),
+                          child: Text(
+                              "$familyExpenseSelectedMonth/$familyExpenseSelectedYear")),
+                    )
+                  else
+                    Padding(
+                      padding: EdgeInsets.only(right: AppPadding.large),
+                      child: ElevatedButton(
+                          onPressed: () =>
+                              _pickMonthYear("familyIncome", dashboardProvider),
+                          child: Text(
+                              "$familyIncomeSelectedMonth/$familyIncomeSelectedYear")),
+                    )
                 ],
               ),
             ),
-          ),
-        ],
+            SizedBox(
+              height: 400,
+              child: familyHistory.isNotEmpty
+                  ? NotificationListener<ScrollNotification>(
+                      onNotification: (ScrollNotification scrollInfo) {
+                        if (scrollInfo.metrics.pixels ==
+                                scrollInfo.metrics.maxScrollExtent &&
+                            (state != DashboardState.loading)) {
+                          if (meta != null &&
+                              meta.page < meta.totalPages &&
+                              !isFetching) {
+                            isFetching = true; // Kunci sebelum memulai fetch
+                            setState(() {});
+                            switch (type) {
+                              case "historyExpense":
+                                dashboardProvider
+                                    .getHistoryExpense(page: meta.page + 1)
+                                    .then((_) {
+                                  isFetching =
+                                      false; // Lepaskan kunci setelah selesai
+                                });
+                                break;
+                              case "historyIncome":
+                                dashboardProvider
+                                    .getHistoryIncome(page: meta.page + 1)
+                                    .then((_) {
+                                  isFetching =
+                                      false; // Lepaskan kunci setelah selesai
+                                });
+                                break;
+                              case "familyHistoryExpense":
+                                dashboardProvider
+                                    .getFamilyHistoryExpense(
+                                        page: meta.page + 1)
+                                    .then((_) {
+                                  isFetching =
+                                      false; // Lepaskan kunci setelah selesai
+                                });
+                                break;
+                              case "familyHistoryIncome":
+                                dashboardProvider
+                                    .getFamilyHistoryIncome(page: meta.page + 1)
+                                    .then((_) {
+                                  isFetching =
+                                      false; // Lepaskan kunci setelah selesai
+                                });
+                                break;
+                              default:
+                                isFetching = false;
+                            }
+                          }
+                        }
+                        return false;
+                      },
+                      child: isWideScreen ? 
+                      ListView(
+                        children: [
+                          DataTable(
+                            columns: const [
+                              DataColumn(label: Text('No')),
+                              DataColumn(label: Text('Username')),
+                              DataColumn(label: Text('Keterangan')),
+                              DataColumn(label: Text('Kategori')),
+                              DataColumn(label: Text('Jumlah')),
+                              DataColumn(label: Text('Tanggal')),
+                            ],
+                            rows: familyHistory!.map((expense) {
+                              final index = familyHistory!.indexOf(expense) + 1;
+                              return DataRow(cells: [
+                                DataCell(Text('$index')),
+                                DataCell(Text(expense.member.user.username)),
+                                DataCell(Text(expense.description)),
+                                DataCell(Text(expense.category)),
+                                DataCell(
+                                    Text('Rp. ${expense.amount.toString()}')),
+                                DataCell(Text(
+                                    '${expense.transactionAt.toLocal().toString().split(' ')[0]}')),
+                              ]);
+                            }).toList(),
+                            // [
+                            // ],
+                          )
+                        ],
+                      ) : ListView(
+                              children: [
+                                FamilyScrollableDataTable(history: familyHistory),
+                              ],
+                            ),
+                    )
+                  : Center(
+                      child: Text("Belum ada transaksi bulan ini"),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -497,62 +906,97 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   main(DashboardProvider dashboardProvider, BuildContext context) {
+    bool isWideScreen = MediaQuery.of(context).size.width > 800;
+
     return SingleChildScrollView(
         child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Financial Family Tracker"),
-        Row(
-          children: [
-            Expanded(
-                child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    Text("Saldo"),
-                    Text("Rp. ${dashboardProvider.balance ?? "0"}"),
-                  ],
-                ),
-              ),
-            )),
-            Expanded(
-                child: Card(
-              child: Column(
-                children: [
-                  Text("Pemasukan"),
-                  Text("Rp. ${dashboardProvider.totalIncome ?? "0"}"),
-                ],
-              ),
-            )),
-            Expanded(
-                child: Card(
-              child: Column(
-                children: [
-                  Text("Pengeluaran"),
-                  Text("Rp. ${dashboardProvider.totalExpense ?? "0"}"),
-                ],
-              ),
-            )),
-          ],
+        Padding(
+          padding: const EdgeInsets.all(AppPadding.large),
+          child: Text("Dashboard",
+              style: Theme.of(context).textTheme.headlineLarge),
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Flexible(
-              flex: 3,
-              child: DefaultTabController(
-                  length: 3,
+        isWideScreen
+            ? Row(
+                children: [
+                  moneyCard(
+                      title: "Saldo",
+                      balance: dashboardProvider.balance,
+                      isWideScreen: isWideScreen),
+                  moneyCard(
+                      title: "Pemasukan",
+                      balance: dashboardProvider.totalIncome,
+                      isWideScreen: isWideScreen),
+                  moneyCard(
+                      title: "Pengeluaran",
+                      balance: dashboardProvider.totalExpense,
+                      isWideScreen: isWideScreen),
+                ],
+              )
+            : Column(
+                children: [
+                  moneyCard(
+                      title: "Saldo",
+                      balance: dashboardProvider.balance,
+                      isWideScreen: isWideScreen),
+                  moneyCard(
+                      title: "Pemasukan",
+                      balance: dashboardProvider.totalIncome,
+                      isWideScreen: isWideScreen),
+                  moneyCard(
+                      title: "Pengeluaran",
+                      balance: dashboardProvider.totalExpense,
+                      isWideScreen: isWideScreen),
+                ],
+              ),
+        isWideScreen
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  transactionSection(context, dashboardProvider, isWideScreen),
+                  recentHistory(context, dashboardProvider, isWideScreen),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  transactionSection(context, dashboardProvider, isWideScreen),
+                  recentHistory(context, dashboardProvider, isWideScreen),
+                ],
+              ),
+      ],
+    ));
+  }
+
+  transactionSection(BuildContext context, DashboardProvider dashboardProvider,
+      bool isWideScreen) {
+    return isWideScreen
+        ? Flexible(
+            flex: 3,
+            child: DefaultTabController(
+                length: 3,
+                child: Padding(
+                  padding: const EdgeInsets.all(AppPadding.large),
                   child: Card(
                     child: Column(
                       children: [
                         TabBar(tabs: [
-                          Text("Pengeluaran"),
-                          Text("Pemasukan"),
-                          Text("Transfer"),
+                          Padding(
+                            padding: const EdgeInsets.all(AppPadding.medium),
+                            child: Text("Pengeluaran"),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(AppPadding.medium),
+                            child: Text("Pemasukan"),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(AppPadding.medium),
+                            child: Text("Transfer"),
+                          ),
                         ]),
                         SizedBox(
-                          height: 300,
+                          height: 302,
                           child: TabBarView(children: [
                             addExpense(context, dashboardProvider),
                             addIncome(context, dashboardProvider),
@@ -561,52 +1005,154 @@ class _DashboardPageState extends State<DashboardPage>
                         ),
                       ],
                     ),
-                  )),
-            ),
-            Flexible(
-                flex: 1,
-                child: SizedBox(
-                  height: 300,
-                  child: Card(
-                    child: Column(
-                      children: [
-                        Text("Riwayat Transaksi"),
-                        Expanded(
-                          child: ListView.builder(
-                            physics: AlwaysScrollableScrollPhysics(),
-                            itemCount:
-                                dashboardProvider.recentTransactions.length,
-                            itemBuilder: (context, index) {
-                              TransactionData transaction =
-                                  dashboardProvider.recentTransactions[index];
-                              return ListTile(
-                                title: Text(transaction.description),
-                                subtitle: Text(
-                                    "${transaction.transactionAt.weekday} ${transaction.transactionAt.month} ${transaction.transactionAt.year}"),
-                                trailing: Text(transaction.amount.toString()),
-                              );
-                            },
-                          ),
-                        )
-
-                        // ListTile(
-                        //   title: Text("Gaji - Ayah"),
-                        //   subtitle: Text("15 Oktober 2025"),
-                        //   trailing: Text("+ 7.000.000"),
-                        // ),
-                        // ListTile(
-                        //   title: Text("Gaji - Ayah"),
-                        //   subtitle: Text("15 Oktober 2025"),
-                        //   trailing: Text("+ 7.000.000"),
-                        // ),
-                      ],
-                    ),
                   ),
                 )),
-          ],
-        ),
-      ],
-    ));
+          )
+        : DefaultTabController(
+            length: 3,
+            child: Padding(
+              padding: const EdgeInsets.all(AppPadding.large),
+              child: Card(
+                child: Column(
+                  children: [
+                    TabBar(tabs: [
+                      Padding(
+                        padding: const EdgeInsets.all(AppPadding.medium),
+                        child: Text("Pengeluaran"),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(AppPadding.medium),
+                        child: Text("Pemasukan"),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(AppPadding.medium),
+                        child: Text("Transfer"),
+                      ),
+                    ]),
+                    SizedBox(
+                      height: 302,
+                      child: TabBarView(children: [
+                        addExpense(context, dashboardProvider),
+                        addIncome(context, dashboardProvider),
+                        tranfer(context, dashboardProvider),
+                      ]),
+                    ),
+                  ],
+                ),
+              ),
+            ));
+  }
+
+  recentHistory(BuildContext context, DashboardProvider dashboardProvider,
+      bool isWideScreen) {
+    return isWideScreen
+        ? Flexible(
+            flex: 1,
+            child: SizedBox(
+              height: 392,
+              child: Padding(
+                padding: const EdgeInsets.all(AppPadding.large),
+                child: Card(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(AppPadding.medium),
+                        child: Text("Riwayat Transaksi",
+                            style: Theme.of(context).textTheme.headlineSmall),
+                      ),
+                      Expanded(
+                        child: dashboardProvider.recentTransactions.isNotEmpty
+                            ? ListView.separated(
+                                separatorBuilder: (context, index) =>
+                                    Divider(color: Color(0xFFE0E0E0)),
+                                physics: AlwaysScrollableScrollPhysics(),
+                                itemCount:
+                                    dashboardProvider.recentTransactions.length,
+                                itemBuilder: (context, index) {
+                                  TransactionData transaction =
+                                      dashboardProvider
+                                          .recentTransactions[index];
+                                  return ListTile(
+                                    title: Text(transaction.description),
+                                    subtitle: Text(
+                                        "${transaction.transactionAt.weekday}-${transaction.transactionAt.month}-${transaction.transactionAt.year}"),
+                                    trailing: Text(
+                                        "Rp. ${transaction.amount.toString()}"),
+                                  );
+                                },
+                              )
+                            : Center(
+                                child: Text("Belum melakukan transaksi"),
+                              ),
+                      )
+
+                      // ListTile(
+                      //   title: Text("Gaji - Ayah"),
+                      //   subtitle: Text("15 Oktober 2025"),
+                      //   trailing: Text("+ 7.000.000"),
+                      // ),
+                      // ListTile(
+                      //   title: Text("Gaji - Ayah"),
+                      //   subtitle: Text("15 Oktober 2025"),
+                      //   trailing: Text("+ 7.000.000"),
+                      // ),
+                    ],
+                  ),
+                ),
+              ),
+            ))
+        : SizedBox(
+            height: 392,
+            child: Padding(
+              padding: const EdgeInsets.all(AppPadding.large),
+              child: Card(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(AppPadding.medium),
+                      child: Text("Riwayat Transaksi",
+                          style: Theme.of(context).textTheme.headlineSmall),
+                    ),
+                    Expanded(
+                      child: dashboardProvider.recentTransactions.isNotEmpty
+                          ? ListView.separated(
+                              separatorBuilder: (context, index) =>
+                                  Divider(color: Color(0xFFE0E0E0)),
+                              physics: AlwaysScrollableScrollPhysics(),
+                              itemCount:
+                                  dashboardProvider.recentTransactions.length,
+                              itemBuilder: (context, index) {
+                                TransactionData transaction =
+                                    dashboardProvider.recentTransactions[index];
+                                return ListTile(
+                                  title: Text(transaction.description),
+                                  subtitle: Text(
+                                      "${transaction.transactionAt.weekday}-${transaction.transactionAt.month}-${transaction.transactionAt.year}"),
+                                  trailing: Text(
+                                      "Rp. ${transaction.amount.toString()}"),
+                                );
+                              },
+                            )
+                          : Center(
+                              child: Text("Belum melakukan transaksi"),
+                            ),
+                    )
+
+                    // ListTile(
+                    //   title: Text("Gaji - Ayah"),
+                    //   subtitle: Text("15 Oktober 2025"),
+                    //   trailing: Text("+ 7.000.000"),
+                    // ),
+                    // ListTile(
+                    //   title: Text("Gaji - Ayah"),
+                    //   subtitle: Text("15 Oktober 2025"),
+                    //   trailing: Text("+ 7.000.000"),
+                    // ),
+                  ],
+                ),
+              ),
+            ),
+          );
   }
 
   Form tranfer(BuildContext context, DashboardProvider dashboardProvider) {
@@ -620,24 +1166,28 @@ class _DashboardPageState extends State<DashboardPage>
           //   labelText: "Kirim ke",
           //   validator: (value) => validateText(value, "Kirim ke"),
           // ),
-          DropdownButtonFormField<int>(
-            decoration: InputDecoration(labelText: "Kirim ke"),
-            value: selectedFamilyMemberId,
-            items: dashboardProvider.familyMembers.map((member) {
-              return DropdownMenuItem<int>(
-                value: member.id,
-                child: Text(member.user.username),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                selectedFamilyMemberId = value;
-              });
-            },
-            validator: (value) {
-              if (value == null) return "Pilih salah satu anggota keluarga";
-              return null;
-            },
+          Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppPadding.medium, vertical: AppPadding.small),
+            child: DropdownButtonFormField<int>(
+              decoration: InputDecoration(labelText: "Kirim ke"),
+              value: selectedFamilyMemberId,
+              items: dashboardProvider.familyMembers.map((member) {
+                return DropdownMenuItem<int>(
+                  value: member.id,
+                  child: Text(member.user.username),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedFamilyMemberId = value;
+                });
+              },
+              validator: (value) {
+                if (value == null) return "Pilih salah satu anggota keluarga";
+                return null;
+              },
+            ),
           ),
           AuthFormField(
             controller: _transferDescController,
@@ -649,45 +1199,47 @@ class _DashboardPageState extends State<DashboardPage>
             labelText: "Masukan jumlah",
             validator: (value) => validateNumber(value, "Jumlah"),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              if (_transferKey.currentState?.validate() ?? false) {
-                try {
-                  final transferAmount =
-                      double.parse(_transferTotalController.text);
-                  final transferDesc = _transferDescController.text;
-                  final recipientId = selectedFamilyMemberId ?? 0;
-                  await context.read<DashboardProvider>().transfer(
-                      amount: transferAmount,
-                      recipientId: recipientId,
-                      description: transferDesc);
+          Center(
+            child: ElevatedButton(
+              onPressed: () async {
+                if (_transferKey.currentState?.validate() ?? false) {
+                  try {
+                    final transferAmount =
+                        double.parse(_transferTotalController.text);
+                    final transferDesc = _transferDescController.text;
+                    final recipientId = selectedFamilyMemberId ?? 0;
+                    await context.read<DashboardProvider>().transfer(
+                        amount: transferAmount,
+                        recipientId: recipientId,
+                        description: transferDesc);
 
-                  if (dashboardProvider.addExpenseState ==
-                      DashboardState.error) {
+                    if (dashboardProvider.addExpenseState ==
+                        DashboardState.error) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(dashboardProvider.addExpenseError ??
+                                "Terjadi kesalahan saat menambahkan pengeluaran")),
+                      );
+                      return;
+                    }
+
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(dashboardProvider.addExpenseError ??
-                              "Terjadi kesalahan saat menambahkan pengeluaran")),
+                      SnackBar(content: Text("Transfer berhasil")),
                     );
-                    return;
+                    _transferDescController.clear();
+                    selectedFamilyMemberId = null;
+                    _transferTotalController.clear();
+
+                    setState(() {});
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Terjadi kesalahan: $e")),
+                    );
                   }
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Transfer berhasil")),
-                  );
-                  _transferDescController.clear();
-                  selectedFamilyMemberId = null;
-                  _transferTotalController.clear();
-
-                  setState(() {});
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Terjadi kesalahan: $e")),
-                  );
                 }
-              }
-            },
-            child: Text("Simpan"),
+              },
+              child: Text("Simpan"),
+            ),
           ),
         ],
       ),
@@ -701,7 +1253,6 @@ class _DashboardPageState extends State<DashboardPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DatePicker(
-            title: Text("Tanggal"),
             date: incomeAt,
             onDatePicked: (DateTime pickedDate) {
               setState(() {
@@ -724,48 +1275,50 @@ class _DashboardPageState extends State<DashboardPage>
             labelText: "Masukan jumlah",
             validator: (value) => validateNumber(value, "Jumlah"),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              if (_incomeKey.currentState?.validate() ?? false) {
-                try {
-                  final incomeAmount =
-                      double.parse(_incomeTotalController.text);
-                  final DateTime incomeDate = incomeAt ?? DateTime.now();
-                  final incomeDesc = _incomeDescController.text;
-                  final incomeCategory = _incomeDescController.text;
-                  await context.read<DashboardProvider>().addIncome(
-                      amount: incomeAmount,
-                      category: incomeCategory,
-                      transactionAt: incomeDate,
-                      description: incomeDesc);
+          Center(
+            child: ElevatedButton(
+              onPressed: () async {
+                if (_incomeKey.currentState?.validate() ?? false) {
+                  try {
+                    final incomeAmount =
+                        double.parse(_incomeTotalController.text);
+                    final DateTime incomeDate = incomeAt ?? DateTime.now();
+                    final incomeDesc = _incomeDescController.text;
+                    final incomeCategory = _incomeDescController.text;
+                    await context.read<DashboardProvider>().addIncome(
+                        amount: incomeAmount,
+                        category: incomeCategory,
+                        transactionAt: incomeDate,
+                        description: incomeDesc);
 
-                  if (dashboardProvider.addExpenseState ==
-                      DashboardState.error) {
+                    if (dashboardProvider.addExpenseState ==
+                        DashboardState.error) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(dashboardProvider.addExpenseError ??
+                                "Terjadi kesalahan saat menambahkan pengeluaran")),
+                      );
+                      return;
+                    }
+
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(dashboardProvider.addExpenseError ??
-                              "Terjadi kesalahan saat menambahkan pengeluaran")),
+                      SnackBar(content: Text("Pendapatan berhasil disimpan")),
                     );
-                    return;
+                    _incomeDescController.clear();
+                    _incomeCategoryController.clear();
+                    _incomeTotalController.clear();
+                    incomeAt = null;
+
+                    setState(() {});
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Terjadi kesalahan: $e")),
+                    );
                   }
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Pendapatan berhasil disimpan")),
-                  );
-                  _incomeDescController.clear();
-                  _incomeCategoryController.clear();
-                  _incomeTotalController.clear();
-                  incomeAt = null;
-
-                  setState(() {});
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Terjadi kesalahan: $e")),
-                  );
                 }
-              }
-            },
-            child: Text("Simpan"),
+              },
+              child: Text("Simpan"),
+            ),
           ),
         ],
       ),
@@ -779,7 +1332,6 @@ class _DashboardPageState extends State<DashboardPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DatePicker(
-            title: Text("Tanggal"),
             date: expenseAt,
             onDatePicked: (DateTime pickedDate) {
               setState(() {
@@ -802,48 +1354,50 @@ class _DashboardPageState extends State<DashboardPage>
             labelText: "Masukan jumlah",
             validator: (value) => validateNumber(value, "Jumlah"),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              if (_expenseKey.currentState?.validate() ?? false) {
-                try {
-                  final expenseAmount =
-                      double.parse(_expenseTotalController.text);
-                  final DateTime expenseDate = expenseAt ?? DateTime.now();
-                  final expenseDesc = _expenseDescController.text;
-                  final expenseCategory = _expenseDescController.text;
-                  await context.read<DashboardProvider>().addExpense(
-                      amount: expenseAmount,
-                      category: expenseCategory,
-                      transactionAt: expenseDate,
-                      description: expenseDesc);
+          Center(
+            child: ElevatedButton(
+              onPressed: () async {
+                if (_expenseKey.currentState?.validate() ?? false) {
+                  try {
+                    final expenseAmount =
+                        double.parse(_expenseTotalController.text);
+                    final DateTime expenseDate = expenseAt ?? DateTime.now();
+                    final expenseDesc = _expenseDescController.text;
+                    final expenseCategory = _expenseDescController.text;
+                    await context.read<DashboardProvider>().addExpense(
+                        amount: expenseAmount,
+                        category: expenseCategory,
+                        transactionAt: expenseDate,
+                        description: expenseDesc);
 
-                  if (dashboardProvider.addExpenseState ==
-                      DashboardState.error) {
+                    if (dashboardProvider.addExpenseState ==
+                        DashboardState.error) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(dashboardProvider.addExpenseError ??
+                                "Terjadi kesalahan saat menambahkan pengeluaran")),
+                      );
+                      return;
+                    }
+
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(dashboardProvider.addExpenseError ??
-                              "Terjadi kesalahan saat menambahkan pengeluaran")),
+                      SnackBar(content: Text("Pengeluaran berhasil disimpan")),
                     );
-                    return;
+                    _expenseDescController.clear();
+                    _expenseCategoryController.clear();
+                    _expenseTotalController.clear();
+                    expenseAt = null;
+
+                    setState(() {});
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Terjadi kesalahan: $e")),
+                    );
                   }
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Pengeluaran berhasil disimpan")),
-                  );
-                  _expenseDescController.clear();
-                  _expenseCategoryController.clear();
-                  _expenseTotalController.clear();
-                  expenseAt = null;
-
-                  setState(() {});
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Terjadi kesalahan: $e")),
-                  );
                 }
-              }
-            },
-            child: Text("Simpan"),
+              },
+              child: Text("Simpan"),
+            ),
           ),
         ],
       ),
@@ -854,21 +1408,17 @@ class _DashboardPageState extends State<DashboardPage>
     return Flexible(
       flex: 1,
       child: Material(
-        color: AppColors.orange,
+        color: AppColors.white,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DrawerHeader(
-              child: Text(
-                "Menu",
-                style: TextStyle(color: Colors.white, fontSize: 18),
-              ),
+              child: Image.asset(ImageRoutes.appLogo, width: 50, height: 50),
             ),
             ListTile(
-              leading: Icon(Icons.home, color: Colors.white),
+              leading: Icon(Icons.home, color: Colors.orange),
               title: Text(
                 "Home",
-                style: TextStyle(color: Colors.white),
               ),
               onTap: () {
                 _pageController.animateToPage(
@@ -879,13 +1429,14 @@ class _DashboardPageState extends State<DashboardPage>
               },
             ),
             ExpansionTile(
+              shape: Border(),
               title: Text("Laporan"),
               children: [
                 ListTile(
-                  leading: Icon(Icons.home, color: Colors.white),
+                  leading: Icon(Icons.self_improvement_rounded,
+                      color: Colors.orange),
                   title: Text(
                     "Pribadi",
-                    style: TextStyle(color: Colors.white),
                   ),
                   onTap: () {
                     // Navigasi atau aksi lainnya
@@ -897,10 +1448,10 @@ class _DashboardPageState extends State<DashboardPage>
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.home, color: Colors.white),
+                  leading:
+                      Icon(Icons.family_restroom_rounded, color: Colors.orange),
                   title: Text(
                     "Keluarga",
-                    style: TextStyle(color: Colors.white),
                   ),
                   onTap: () {
                     // Navigasi atau aksi lainnya
@@ -914,10 +1465,9 @@ class _DashboardPageState extends State<DashboardPage>
               ],
             ),
             ListTile(
-              leading: Icon(Icons.settings, color: Colors.white),
+              leading: Icon(Icons.settings, color: Colors.orange),
               title: Text(
                 "Settings",
-                style: TextStyle(color: Colors.white),
               ),
               onTap: () {
                 _pageController.animateToPage(

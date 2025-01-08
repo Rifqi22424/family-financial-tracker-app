@@ -1,5 +1,7 @@
+import 'package:financial_family_tracker/core/consts/app_padding.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../auth/presentation/widgets/form_field_registration.dart';
 import '../../data/models/arguments/join_family_argument.dart';
 import '../../states/create_family_provider.dart';
 
@@ -19,56 +21,63 @@ class _CreateFamilyPageState extends State<CreateFamilyPage> {
     return Scaffold(
       body: Consumer<CreateFamilyProvider>(
         builder: (context, createFamilyProvider, child) {
-          return Column(
-            children: [
-              const Text("Selamat datang kepala keluarga"),
-              const Text("Silahkan beri nama keluarga anda"),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _familyNameController,
-                      decoration:
-                          const InputDecoration(labelText: "Nama Keluarga"),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final String familyName =
-                          _familyNameController.text.trim();
-                      if (familyName.isEmpty) return;
-
-                      await createFamilyProvider.createFamily(
-                        familyName,
-                        widget.argument.role,
-                      );
-
-                      if (createFamilyProvider.state ==
-                          CreateFamilyState.error) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(createFamilyProvider.errorMessage ??
-                                "Terjadi kesalahan"),
-                          ),
-                        );
-                        return;
-                      }
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Keluarga berhasil dibuat"),
+          return Center(
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width / 2,
+              child: Card(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                        "Selamat datang kepala keluarga \nSilahkan beri nama keluarga anda"),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AuthFormField(
+                              controller: _familyNameController,
+                              labelText: "Nama Keluarga"),
                         ),
-                      );
-                      Navigator.pushNamed(context, "/dashboard");
-                    },
-                    child:
-                        createFamilyProvider.state == CreateFamilyState.loading
-                            ? const CircularProgressIndicator()
-                            : const Text("Buat keluarga"),
-                  ),
-                ],
+                        ElevatedButton(
+                          onPressed: () async {
+                            final String familyName =
+                                _familyNameController.text.trim();
+                            if (familyName.isEmpty) return;
+
+                            await createFamilyProvider.createFamily(
+                              familyName,
+                              widget.argument.role,
+                            );
+
+                            if (createFamilyProvider.state ==
+                                CreateFamilyState.error) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      createFamilyProvider.errorMessage ??
+                                          "Terjadi kesalahan"),
+                                ),
+                              );
+                              return;
+                            }
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Keluarga berhasil dibuat"),
+                              ),
+                            );
+                            Navigator.pushNamed(context, "/dashboard");
+                          },
+                          child: createFamilyProvider.state ==
+                                  CreateFamilyState.loading
+                              ? const CircularProgressIndicator()
+                              : const Text("Buat keluarga"),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           );
         },
       ),

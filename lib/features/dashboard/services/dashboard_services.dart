@@ -164,10 +164,12 @@ class DashboardServices {
     int page = 1,
     int limit = 10,
     required String transactionType,
+    required int month,
+    required int year,
     String timePeriod = "all",
   }) async {
     final url = Uri.parse(
-        "$baseUrl/transaction/history?transactionType=$transactionType&timePeriod=$timePeriod&page=$page&limit=$limit");
+        "$baseUrl/transaction/history?transactionType=$transactionType&timePeriod=$timePeriod&page=$page&limit=$limit&month=$month&year=$year");
 
     try {
       final response = await http.get(
@@ -196,11 +198,12 @@ class DashboardServices {
     int page = 1,
     int limit = 10,
     required String transactionType,
-    String timePeriod = "all",
+    required int month,
+    required int year,
   }) async {
     print(token);
     final url = Uri.parse(
-        "$baseUrl/transaction/history/family?transactionType=$transactionType&timePeriod=$timePeriod&page=$page&limit=$limit");
+        "$baseUrl/transaction/history/family?transactionType=$transactionType&page=$page&limit=$limit&month=$month&year=$year");
 
     try {
       final response = await http.get(

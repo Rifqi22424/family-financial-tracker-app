@@ -25,7 +25,7 @@ class RegistrationProvider with ChangeNotifier {
           email: email,
           username: username,
           password: password,
-          confirmPassword: confirmPassword);
+          confirmNewPassword: confirmPassword);
 
       if (response != null) {
         _registrationResponse = response;
