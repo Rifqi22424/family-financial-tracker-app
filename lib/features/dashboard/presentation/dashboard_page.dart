@@ -272,6 +272,8 @@ class _DashboardPageState extends State<DashboardPage>
                                 if (state == PasswordState.success) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
+                                      
+                                    backgroundColor: Colors.green,
                                         content:
                                             Text("Password berhasil diubah!")),
                                   );
@@ -282,6 +284,7 @@ class _DashboardPageState extends State<DashboardPage>
                                 } else if (state == PasswordState.error) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
+                                    backgroundColor: Colors.red,
                                         content: Text(
                                             passwordProvider.errorMessage ??
                                                 "Terjadi kesalahan")),
@@ -290,6 +293,7 @@ class _DashboardPageState extends State<DashboardPage>
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
+                                    backgroundColor: Colors.red,
                                       content: Text("Terjadi kesalahan: $e")),
                                 );
                               }
@@ -1217,6 +1221,7 @@ class _DashboardPageState extends State<DashboardPage>
                         DashboardState.error) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
+                                    backgroundColor: Colors.red,
                             content: Text(dashboardProvider.addExpenseError ??
                                 "Terjadi kesalahan saat menambahkan pengeluaran")),
                       );
@@ -1224,7 +1229,9 @@ class _DashboardPageState extends State<DashboardPage>
                     }
 
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Transfer berhasil")),
+                      SnackBar(
+                        
+                                    backgroundColor: Colors.green,content: Text("Transfer berhasil")),
                     );
                     _transferDescController.clear();
                     selectedFamilyMemberId = null;
@@ -1233,7 +1240,8 @@ class _DashboardPageState extends State<DashboardPage>
                     setState(() {});
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Terjadi kesalahan: $e")),
+                      SnackBar(
+                                    backgroundColor: Colors.red,content: Text("Terjadi kesalahan: $e")),
                     );
                   }
                 }
@@ -1295,6 +1303,7 @@ class _DashboardPageState extends State<DashboardPage>
                         DashboardState.error) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
+                                    backgroundColor: Colors.red,
                             content: Text(dashboardProvider.addExpenseError ??
                                 "Terjadi kesalahan saat menambahkan pengeluaran")),
                       );
@@ -1302,7 +1311,8 @@ class _DashboardPageState extends State<DashboardPage>
                     }
 
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Pendapatan berhasil disimpan")),
+                      SnackBar(
+                                    backgroundColor: Colors.green,content: Text("Pendapatan berhasil disimpan")),
                     );
                     _incomeDescController.clear();
                     _incomeCategoryController.clear();
@@ -1312,7 +1322,8 @@ class _DashboardPageState extends State<DashboardPage>
                     setState(() {});
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Terjadi kesalahan: $e")),
+                      SnackBar(
+                                    backgroundColor: Colors.red,content: Text("Terjadi kesalahan: $e")),
                     );
                   }
                 }
@@ -1374,6 +1385,7 @@ class _DashboardPageState extends State<DashboardPage>
                         DashboardState.error) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
+                                    backgroundColor: Colors.red,
                             content: Text(dashboardProvider.addExpenseError ??
                                 "Terjadi kesalahan saat menambahkan pengeluaran")),
                       );
@@ -1381,7 +1393,8 @@ class _DashboardPageState extends State<DashboardPage>
                     }
 
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Pengeluaran berhasil disimpan")),
+                      SnackBar(
+                                    backgroundColor: Colors.green,content: Text("Pengeluaran berhasil disimpan")),
                     );
                     _expenseDescController.clear();
                     _expenseCategoryController.clear();
@@ -1391,7 +1404,8 @@ class _DashboardPageState extends State<DashboardPage>
                     setState(() {});
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Terjadi kesalahan: $e")),
+                      SnackBar(
+                                    backgroundColor: Colors.red,content: Text("Terjadi kesalahan: $e")),
                     );
                   }
                 }

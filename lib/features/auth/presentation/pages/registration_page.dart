@@ -82,6 +82,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                                   RegistrationState.error) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
+                                    backgroundColor: Colors.red,
                                     content: Text(
                                         registrationProvider.errorMessage ??
                                             "Login failed."),

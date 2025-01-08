@@ -45,6 +45,8 @@ class _VerficationPageState extends State<VerficationPage> {
                           if (verificationCode.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
+                                
+                                    backgroundColor: Colors.red,
                                   content: Text(
                                       "Kode verifikasi tidak boleh kosong")),
                             );
@@ -58,6 +60,8 @@ class _VerficationPageState extends State<VerficationPage> {
                               VerificationState.error) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
+                                
+                                    backgroundColor: Colors.red,
                                   content: Text(
                                       verificationProvider.errorMessage ??
                                           "Terjadi kesalahan")),
@@ -66,6 +70,7 @@ class _VerficationPageState extends State<VerficationPage> {
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
+                                    backgroundColor: Colors.green,
                                 content: Text(
                                     verificationProvider.response?.message ??
                                         "Verifikasi Berhasil")),

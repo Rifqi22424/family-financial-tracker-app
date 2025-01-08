@@ -52,6 +52,7 @@ class _CreateFamilyPageState extends State<CreateFamilyPage> {
                                 CreateFamilyState.error) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
+                                    backgroundColor: Colors.red,
                                   content: Text(
                                       createFamilyProvider.errorMessage ??
                                           "Terjadi kesalahan"),
@@ -62,6 +63,7 @@ class _CreateFamilyPageState extends State<CreateFamilyPage> {
 
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
+                                    backgroundColor: Colors.green,
                                 content: Text("Keluarga berhasil dibuat"),
                               ),
                             );

@@ -49,9 +49,9 @@ class _JoinFamilyPageState extends State<JoinFamilyPage> {
                           onPressed: () async {
                             final String familyCode =
                                 _familyCodeController.text.trim();
-        
+
                             if (familyCode.isEmpty) return;
-        
+
                             await joinFamilyProvider.joinFamily(
                               familyCode,
                               widget.argument.role,
@@ -60,14 +60,17 @@ class _JoinFamilyPageState extends State<JoinFamilyPage> {
                                 JoinFamilyState.error) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(joinFamilyProvider.errorMessage ??
-                                      "Terjadi kesalahan"),
+                                  backgroundColor: Colors.red,
+                                  content: Text(
+                                      joinFamilyProvider.errorMessage ??
+                                          "Terjadi kesalahan"),
                                 ),
                               );
                               return;
                             }
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
+                                backgroundColor: Colors.green,
                                 content: Text("Berhasil bergabung ke keluarga"),
                               ),
                             );
