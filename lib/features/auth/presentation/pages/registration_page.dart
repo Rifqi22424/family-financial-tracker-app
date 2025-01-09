@@ -22,7 +22,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _usernameController.text = "username";
     _emailController.text = "gmail@gmail.com";

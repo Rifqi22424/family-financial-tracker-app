@@ -92,4 +92,23 @@ class FamilyService {
       throw Exception('Failed to fetch family members');
     }
   }
+
+  Future<String> fetchFamilyCode({required String token}) async {
+    final url = Uri.parse('$baseUrl/family');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['data']['familyCode'];
+    } else {
+      throw Exception('Failed to fetch family code');
+    }
+  }
 }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/consts/app_colors.dart';
 import '../../../core/consts/app_padding.dart';
 
 class DatePicker extends StatelessWidget {
@@ -22,26 +21,8 @@ class DatePicker extends StatelessWidget {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: date ?? minDate,
-      firstDate: minDate ?? DateTime.now(), // Gunakan minDate jika tersedia
+      firstDate: DateTime(2000), // Gunakan minDate jika tersedia
       lastDate: DateTime(2100),
-      // builder: (context, child) {
-        // return Theme(
-        //   data: Theme.of(context).copyWith(
-        //     colorScheme: ColorScheme.light(
-        //       primary: AppColors.orange, // header background color
-        //       onPrimary: AppColors.white, // header text color
-        //       onSurface: AppColors.black, // body text color
-        //     ),
-        //     textButtonTheme: TextButtonThemeData(
-        //       style: TextButton.styleFrom(
-        //         foregroundColor: AppColors.orange, // button text color
-        //       ),
-        //     ),
-        //   ),
-        //   child: child!,
-        // );
-        
-      // },
     );
     if (picked != null && picked != date) {
       onDatePicked(picked);

@@ -71,7 +71,7 @@ class _CreateFamilyPageState extends State<CreateFamilyPage> {
                           },
                           child: createFamilyProvider.state ==
                                   CreateFamilyState.loading
-                              ? const CircularProgressIndicator()
+                              ? const CircularProgressIndicator(color: Colors.white)
                               : const Text("Buat keluarga"),
                         ),
                       ],

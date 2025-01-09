@@ -15,6 +15,7 @@ import '../../../core/consts/image_routes.dart';
 import '../../auth/states/password_provider.dart';
 import '../data/models/family_history_trasnsaction_response.dart';
 import '../data/models/recent_transaction_response.dart';
+import '../states/family_code_provider.dart';
 import '../widgets/scrollable_data_table.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -141,6 +142,8 @@ class _DashboardPageState extends State<DashboardPage>
   @override
   void initState() {
     context.read<DashboardProvider>().fetchDashboardData();
+
+    context.read<FamilyCodeProvider>().fetchFamilyCode();
     super.initState();
     _pageController = PageController(initialPage: 0);
   }
@@ -209,6 +212,26 @@ class _DashboardPageState extends State<DashboardPage>
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Consumer<FamilyCodeProvider>(
+                          builder: (context, familyCodeProvider, child) {
+                        switch (familyCodeProvider.state) {
+                          case FamilyCodeState.initial:
+                            return CircularProgressIndicator();
+                          case FamilyCodeState.loading:
+                            return CircularProgressIndicator();
+                          case FamilyCodeState.error:
+                            return Text(familyCodeProvider.errorMessage ??
+                                "Anda bukan kepala keluarga");
+                          case FamilyCodeState.success:
+                            return Padding(
+                              padding: const EdgeInsets.only(top: AppPadding.large, left: AppPadding.large),
+                              child: Text(
+                                  "Family Code: ${familyCodeProvider.familyCode ?? "Loading..."}"),
+                            );
+                          default:
+                            return Container();
+                        }
+                      }),
                       Padding(
                         padding: const EdgeInsets.all(AppPadding.large),
                         child: Text("Ubah Password",
@@ -272,8 +295,7 @@ class _DashboardPageState extends State<DashboardPage>
                                 if (state == PasswordState.success) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      
-                                    backgroundColor: Colors.green,
+                                        backgroundColor: Colors.green,
                                         content:
                                             Text("Password berhasil diubah!")),
                                   );
@@ -284,7 +306,7 @@ class _DashboardPageState extends State<DashboardPage>
                                 } else if (state == PasswordState.error) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                    backgroundColor: Colors.red,
+                                        backgroundColor: Colors.red,
                                         content: Text(
                                             passwordProvider.errorMessage ??
                                                 "Terjadi kesalahan")),
@@ -293,7 +315,7 @@ class _DashboardPageState extends State<DashboardPage>
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    backgroundColor: Colors.red,
+                                      backgroundColor: Colors.red,
                                       content: Text("Terjadi kesalahan: $e")),
                                 );
                               }
@@ -365,7 +387,8 @@ class _DashboardPageState extends State<DashboardPage>
                 0,
                 duration: Duration(milliseconds: 1000),
                 curve: Curves.easeInOut,
-              ); // Pindah ke halaman pertama
+              );
+              Navigator.of(context).pop(); // Pindah ke halaman pertama
             },
           ),
           ExpansionTile(
@@ -385,6 +408,7 @@ class _DashboardPageState extends State<DashboardPage>
                     duration: Duration(milliseconds: 1000),
                     curve: Curves.easeInOut,
                   ); //
+                  Navigator.of(context).pop();
                 },
               ),
               ListTile(
@@ -400,6 +424,7 @@ class _DashboardPageState extends State<DashboardPage>
                     duration: Duration(milliseconds: 1000),
                     curve: Curves.easeInOut,
                   ); //
+                  Navigator.of(context).pop();
                 },
               ),
             ],
@@ -492,6 +517,15 @@ class _DashboardPageState extends State<DashboardPage>
 
   moneyCard(
       {double? balance, required String title, required bool isWideScreen}) {
+    Color balanceColor = Colors.black; // default color
+
+    // Set color based on title
+    if (title == "Pemasukan") {
+      balanceColor = Colors.green;
+    } else if (title == "Pengeluaran") {
+      balanceColor = Colors.red;
+    }
+
     return isWideScreen
         ? Expanded(
             child: Padding(
@@ -499,12 +533,18 @@ class _DashboardPageState extends State<DashboardPage>
             child: Card(
               child: Padding(
                 padding: EdgeInsets.all(AppPadding.card),
-                child: Column(
-                  children: [
-                    Text(title,
-                        style: Theme.of(context).textTheme.headlineSmall),
-                    Text("Rp. ${balance ?? "0"}"),
-                  ],
+                child: Center(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: Theme.of(context).textTheme.headlineSmall),
+                      Text(
+                        "Rp. ${balance ?? "0"}",
+                        style: TextStyle(color: balanceColor),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -521,7 +561,10 @@ class _DashboardPageState extends State<DashboardPage>
                         children: [
                           Text(title,
                               style: Theme.of(context).textTheme.headlineSmall),
-                          Text("Rp. ${balance ?? "0"}"),
+                          Text(
+                            "Rp. ${balance ?? "0"}",
+                            style: TextStyle(color: balanceColor),
+                          ),
                         ],
                       ),
                     ),
@@ -758,8 +801,7 @@ class _DashboardPageState extends State<DashboardPage>
       required DashboardProvider dashboardProvider,
       required String type}) {
     bool isFetching = false;
-        bool isWideScreen = MediaQuery.of(context).size.width > 800;
-
+    bool isWideScreen = MediaQuery.of(context).size.width > 800;
 
     return Padding(
       padding: const EdgeInsets.all(AppPadding.large),
@@ -854,38 +896,42 @@ class _DashboardPageState extends State<DashboardPage>
                         }
                         return false;
                       },
-                      child: isWideScreen ? 
-                      ListView(
-                        children: [
-                          DataTable(
-                            columns: const [
-                              DataColumn(label: Text('No')),
-                              DataColumn(label: Text('Username')),
-                              DataColumn(label: Text('Keterangan')),
-                              DataColumn(label: Text('Kategori')),
-                              DataColumn(label: Text('Jumlah')),
-                              DataColumn(label: Text('Tanggal')),
-                            ],
-                            rows: familyHistory!.map((expense) {
-                              final index = familyHistory!.indexOf(expense) + 1;
-                              return DataRow(cells: [
-                                DataCell(Text('$index')),
-                                DataCell(Text(expense.member.user.username)),
-                                DataCell(Text(expense.description)),
-                                DataCell(Text(expense.category)),
-                                DataCell(
-                                    Text('Rp. ${expense.amount.toString()}')),
-                                DataCell(Text(
-                                    '${expense.transactionAt.toLocal().toString().split(' ')[0]}')),
-                              ]);
-                            }).toList(),
-                            // [
-                            // ],
-                          )
-                        ],
-                      ) : ListView(
+                      child: isWideScreen
+                          ? ListView(
                               children: [
-                                FamilyScrollableDataTable(history: familyHistory),
+                                DataTable(
+                                  columns: const [
+                                    DataColumn(label: Text('No')),
+                                    DataColumn(label: Text('Username')),
+                                    DataColumn(label: Text('Keterangan')),
+                                    DataColumn(label: Text('Kategori')),
+                                    DataColumn(label: Text('Jumlah')),
+                                    DataColumn(label: Text('Tanggal')),
+                                  ],
+                                  rows: familyHistory!.map((expense) {
+                                    final index =
+                                        familyHistory!.indexOf(expense) + 1;
+                                    return DataRow(cells: [
+                                      DataCell(Text('$index')),
+                                      DataCell(
+                                          Text(expense.member.user.username)),
+                                      DataCell(Text(expense.description)),
+                                      DataCell(Text(expense.category)),
+                                      DataCell(Text(
+                                          'Rp. ${expense.amount.toString()}')),
+                                      DataCell(Text(
+                                          '${expense.transactionAt.toLocal().toString().split(' ')[0]}')),
+                                    ]);
+                                  }).toList(),
+                                  // [
+                                  // ],
+                                )
+                              ],
+                            )
+                          : ListView(
+                              children: [
+                                FamilyScrollableDataTable(
+                                    history: familyHistory),
                               ],
                             ),
                     )
@@ -1079,9 +1125,15 @@ class _DashboardPageState extends State<DashboardPage>
                                   return ListTile(
                                     title: Text(transaction.description),
                                     subtitle: Text(
-                                        "${transaction.transactionAt.weekday}-${transaction.transactionAt.month}-${transaction.transactionAt.year}"),
+                                        "${transaction.transactionAt.weekday}/${transaction.transactionAt.month}/${transaction.transactionAt.year}"),
                                     trailing: Text(
-                                        "Rp. ${transaction.amount.toString()}"),
+                                      "Rp. ${transaction.amount.toString()}",
+                                      style: TextStyle(
+                                          color: (transaction.transactionType ==
+                                                  "INCOME")
+                                              ? Colors.green
+                                              : Colors.red),
+                                    ),
                                   );
                                 },
                               )
@@ -1221,7 +1273,7 @@ class _DashboardPageState extends State<DashboardPage>
                         DashboardState.error) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                                    backgroundColor: Colors.red,
+                            backgroundColor: Colors.red,
                             content: Text(dashboardProvider.addExpenseError ??
                                 "Terjadi kesalahan saat menambahkan pengeluaran")),
                       );
@@ -1230,8 +1282,8 @@ class _DashboardPageState extends State<DashboardPage>
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        
-                                    backgroundColor: Colors.green,content: Text("Transfer berhasil")),
+                          backgroundColor: Colors.green,
+                          content: Text("Transfer berhasil")),
                     );
                     _transferDescController.clear();
                     selectedFamilyMemberId = null;
@@ -1241,7 +1293,8 @@ class _DashboardPageState extends State<DashboardPage>
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                                    backgroundColor: Colors.red,content: Text("Terjadi kesalahan: $e")),
+                          backgroundColor: Colors.red,
+                          content: Text("Terjadi kesalahan: $e")),
                     );
                   }
                 }
@@ -1299,11 +1352,11 @@ class _DashboardPageState extends State<DashboardPage>
                         transactionAt: incomeDate,
                         description: incomeDesc);
 
-                    if (dashboardProvider.addExpenseState ==
+                    if (dashboardProvider.addIncomeState ==
                         DashboardState.error) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                                    backgroundColor: Colors.red,
+                            backgroundColor: Colors.red,
                             content: Text(dashboardProvider.addExpenseError ??
                                 "Terjadi kesalahan saat menambahkan pengeluaran")),
                       );
@@ -1312,7 +1365,8 @@ class _DashboardPageState extends State<DashboardPage>
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                                    backgroundColor: Colors.green,content: Text("Pendapatan berhasil disimpan")),
+                          backgroundColor: Colors.green,
+                          content: Text("Pendapatan berhasil disimpan")),
                     );
                     _incomeDescController.clear();
                     _incomeCategoryController.clear();
@@ -1323,7 +1377,8 @@ class _DashboardPageState extends State<DashboardPage>
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                                    backgroundColor: Colors.red,content: Text("Terjadi kesalahan: $e")),
+                          backgroundColor: Colors.red,
+                          content: Text("Terjadi kesalahan: $e")),
                     );
                   }
                 }
@@ -1385,7 +1440,7 @@ class _DashboardPageState extends State<DashboardPage>
                         DashboardState.error) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                                    backgroundColor: Colors.red,
+                            backgroundColor: Colors.red,
                             content: Text(dashboardProvider.addExpenseError ??
                                 "Terjadi kesalahan saat menambahkan pengeluaran")),
                       );
@@ -1394,7 +1449,8 @@ class _DashboardPageState extends State<DashboardPage>
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                                    backgroundColor: Colors.green,content: Text("Pengeluaran berhasil disimpan")),
+                          backgroundColor: Colors.green,
+                          content: Text("Pengeluaran berhasil disimpan")),
                     );
                     _expenseDescController.clear();
                     _expenseCategoryController.clear();
@@ -1405,7 +1461,8 @@ class _DashboardPageState extends State<DashboardPage>
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                                    backgroundColor: Colors.red,content: Text("Terjadi kesalahan: $e")),
+                          backgroundColor: Colors.red,
+                          content: Text("Terjadi kesalahan: $e")),
                     );
                   }
                 }

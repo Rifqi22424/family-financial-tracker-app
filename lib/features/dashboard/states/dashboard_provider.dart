@@ -113,7 +113,7 @@ class DashboardProvider with ChangeNotifier {
         getHistoryExpense(),
         getHistoryIncome(),
         getFamilyHistoryExpense(),
-        getFamilyHistoryIncome(),
+      getFamilyHistoryIncome(),
       ]);
     } catch (e) {
       print("Error fetching dashboard data: ${e.toString()}");

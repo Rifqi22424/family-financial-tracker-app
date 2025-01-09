@@ -13,6 +13,7 @@ import 'core/consts/app_theme.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/verfication_page.dart';
 import 'features/auth/states/registration_provider.dart';
+import 'features/dashboard/states/family_code_provider.dart';
 import 'routes/generate_route.dart';
 import 'features/auth/states/login_provider.dart';
 import 'package:month_year_picker/month_year_picker.dart';
@@ -36,6 +37,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CreateFamilyProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => PasswordProvider()),
+        ChangeNotifierProvider(create: (_) => FamilyCodeProvider()),
       ],
       child: MaterialApp(
         initialRoute: '/login',
