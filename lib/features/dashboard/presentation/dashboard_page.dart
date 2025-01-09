@@ -175,7 +175,8 @@ class _DashboardPageState extends State<DashboardPage>
           appBar: isWideScreen
               ? null
               : AppBar(
-                  title: Text("Financial Family Tracker"),
+                  title: Text("duitbapak"),
+                  centerTitle: true,
                 ),
           body: Row(
             children: [
@@ -337,6 +338,7 @@ class _DashboardPageState extends State<DashboardPage>
                     ],
                   ),
                 ),
+                SizedBox(height: AppPadding.medium),
                 Align(
                   alignment: Alignment.centerRight,
                   child: ElevatedButton(
@@ -1183,8 +1185,7 @@ class _DashboardPageState extends State<DashboardPage>
       children: [
         Padding(
           padding: const EdgeInsets.all(AppPadding.large),
-          child: Text("Dashboard",
-              style: Theme.of(context).textTheme.headlineLarge),
+          child: Text("Home", style: Theme.of(context).textTheme.headlineLarge),
         ),
         isWideScreen
             ? Row(
@@ -1474,6 +1475,7 @@ class _DashboardPageState extends State<DashboardPage>
             labelText: "Masukan jumlah",
             validator: (value) => validateNumber(value, "Jumlah"),
           ),
+          SizedBox(height: AppPadding.medium),
           Center(
             child: ElevatedButton(
               onPressed: () async {
@@ -1555,6 +1557,7 @@ class _DashboardPageState extends State<DashboardPage>
             labelText: "Masukan jumlah",
             validator: (value) => validateNumber(value, "Jumlah"),
           ),
+          SizedBox(height: AppPadding.medium),
           Center(
             child: ElevatedButton(
               onPressed: () async {
@@ -1639,6 +1642,7 @@ class _DashboardPageState extends State<DashboardPage>
             labelText: "Masukan jumlah",
             validator: (value) => validateNumber(value, "Jumlah"),
           ),
+          SizedBox(height: AppPadding.medium),
           Center(
             child: ElevatedButton(
               onPressed: () async {
@@ -1689,6 +1693,7 @@ class _DashboardPageState extends State<DashboardPage>
               child: Text("Simpan"),
             ),
           ),
+            // SizedBox(height: AppPadding.large),
         ],
       ),
     );
@@ -1703,7 +1708,13 @@ class _DashboardPageState extends State<DashboardPage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DrawerHeader(
-              child: Image.asset(ImageRoutes.appLogo, width: 50, height: 50),
+              child: Row(
+                children: [
+                  Image.asset(ImageRoutes.appLogo, width: 50, height: 50),
+                  SizedBox(width: AppPadding.large),
+                  Text("duitbapak")
+                ],
+              ),
             ),
             ListTile(
               leading: Icon(Icons.home, color: Colors.orange),

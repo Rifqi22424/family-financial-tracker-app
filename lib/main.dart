@@ -40,6 +40,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FamilyCodeProvider()),
       ],
       child: MaterialApp(
+        debugShowCheckedModeBanner: false,
         initialRoute: '/login',
       // onGenerateInitialRoutes: (initialRoute) {
       //   if (initialRoute == '/create_family') {

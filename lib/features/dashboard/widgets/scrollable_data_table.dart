@@ -1,6 +1,4 @@
-import 'package:financial_family_tracker/features/dashboard/states/dashboard_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../data/models/history_transaction_response.dart';
 
