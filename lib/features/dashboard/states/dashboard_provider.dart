@@ -26,6 +26,8 @@ class DashboardProvider with ChangeNotifier {
   DashboardState _addIncomeState = DashboardState.initial;
   DashboardState _addExpenseState = DashboardState.initial;
   DashboardState _transferState = DashboardState.initial;
+  DashboardState _editTransactionState = DashboardState.initial;
+  DashboardState _deleteTransactionState = DashboardState.initial;
 
   // Error messages for each operation
   String? _familyHistoryIncomeError;
@@ -40,6 +42,8 @@ class DashboardProvider with ChangeNotifier {
   String? _totalIncomeError;
   String? _addIncomeError;
   String? _addExpenseError;
+  String? _editTransactionError;
+  String? _deleteTransactionError;
 
   // Data
   double? _balance;
@@ -69,6 +73,8 @@ class DashboardProvider with ChangeNotifier {
   DashboardState get transferState => _transferState;
   DashboardState get addIncomeState => _addIncomeState;
   DashboardState get addExpenseState => _addExpenseState;
+  DashboardState get editTransactionState => _editTransactionState;
+  DashboardState get deleteTransactionState => _deleteTransactionState;
 
   // Getters for error messages
   String? get familyHistoryExpenseError => _familyHistoryExpenseError;
@@ -83,6 +89,8 @@ class DashboardProvider with ChangeNotifier {
   String? get totalIncomeError => _totalIncomeError;
   String? get addIncomeError => _addIncomeError;
   String? get addExpenseError => _addExpenseError;
+  String? get editTransactionError => _editTransactionError;
+  String? get deleteTransactionError => _deleteTransactionError;
 
   // Getters for data
   double? get balance => _balance;
@@ -113,7 +121,7 @@ class DashboardProvider with ChangeNotifier {
         getHistoryExpense(),
         getHistoryIncome(),
         getFamilyHistoryExpense(),
-      getFamilyHistoryIncome(),
+        getFamilyHistoryIncome(),
       ]);
     } catch (e) {
       print("Error fetching dashboard data: ${e.toString()}");
@@ -310,13 +318,12 @@ class DashboardProvider with ChangeNotifier {
 
       FamilyHistoryTransactionsResponse response =
           await _dashboardService.getFamilyHistoryTransactions(
-        token: token,
-        page: page,
-        limit: limit,
-        transactionType: transactionType,
-        month: month,
-        year: year
-      );
+              token: token,
+              page: page,
+              limit: limit,
+              transactionType: transactionType,
+              month: month,
+              year: year);
 
       if (page == 1) {
         _familyHistoryExpense = response.data;
@@ -460,6 +467,10 @@ class DashboardProvider with ChangeNotifier {
       await getTotalIncome();
       await getBalance();
       await getRecentTransactions();
+      await getHistoryExpense();
+      await getHistoryIncome();
+      await getFamilyHistoryExpense();
+      await getFamilyHistoryIncome();
 
       _addIncomeState = DashboardState.success;
     } catch (e) {
@@ -492,6 +503,10 @@ class DashboardProvider with ChangeNotifier {
       await getTotalExpense();
       await getBalance();
       await getRecentTransactions();
+      await getHistoryExpense();
+      await getHistoryIncome();
+      await getFamilyHistoryExpense();
+      await getFamilyHistoryIncome();
 
       _transferState = DashboardState.success;
     } catch (e) {
@@ -528,11 +543,93 @@ class DashboardProvider with ChangeNotifier {
       await getTotalExpense();
       await getBalance();
       await getRecentTransactions();
+      await getHistoryExpense();
+      await getHistoryIncome();
+      await getFamilyHistoryExpense();
+      await getFamilyHistoryIncome();
 
       _addExpenseState = DashboardState.success;
     } catch (e) {
       _addExpenseError = e.toString();
       _addExpenseState = DashboardState.error;
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> editTransaction({
+    required int transactionId,
+    required double amount,
+    required String transactionType,
+    required String category,
+    required DateTime transactionAt,
+    String description = "",
+  }) async {
+    _editTransactionState = DashboardState.loading;
+    notifyListeners();
+
+    try {
+      final String? token = await SharedPreferencesHelper.getAuthToken();
+      if (token == null) throw "Token tidak ditemukan. Silakan login ulang.";
+
+      await _dashboardService.editTransaction(
+        token: token,
+        transactionId: transactionId,
+        amount: amount,
+        transactionType: transactionType,
+        category: category,
+        transactionAt: transactionAt,
+        description: description,
+      );
+
+      // Refresh data setelah edit transaksi
+      await getTotalIncome();
+      await getTotalExpense();
+      await getBalance();
+      await getRecentTransactions();
+      await getHistoryExpense();
+      await getHistoryIncome();
+      await getFamilyHistoryExpense();
+      await getFamilyHistoryIncome();
+
+      _editTransactionState = DashboardState.success;
+    } catch (e) {
+      _editTransactionError = e.toString();
+      _editTransactionState = DashboardState.error;
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteTransaction({
+    required int transactionId,
+  }) async {
+    _deleteTransactionState = DashboardState.loading;
+    notifyListeners();
+
+    try {
+      final String? token = await SharedPreferencesHelper.getAuthToken();
+      if (token == null) throw "Token tidak ditemukan. Silakan login ulang.";
+
+      await _dashboardService.deleteTransaction(
+        token: token,
+        transactionId: transactionId,
+      );
+
+      // Refresh data setelah delete transaksi
+      await getTotalIncome();
+      await getTotalExpense();
+      await getBalance();
+      await getRecentTransactions();
+      await getHistoryExpense();
+      await getHistoryIncome();
+      await getFamilyHistoryExpense();
+      await getFamilyHistoryIncome();
+
+      _deleteTransactionState = DashboardState.success;
+    } catch (e) {
+      _deleteTransactionError = e.toString();
+      _deleteTransactionState = DashboardState.error;
     } finally {
       notifyListeners();
     }

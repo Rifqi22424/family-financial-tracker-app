@@ -148,6 +148,13 @@ class _DashboardPageState extends State<DashboardPage>
     _pageController = PageController(initialPage: 0);
   }
 
+  // @override
+  // void didChangeDependencies() {
+  //   super.didChangeDependencies();
+  //   // Ensure the snackbar is shown only once when the widget is built
+  //   showTransactionSnackbar(context, context.read<DashboardProvider>());
+  // }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -177,7 +184,7 @@ class _DashboardPageState extends State<DashboardPage>
                 flex: 4,
                 child: PageView(
                   controller: _pageController,
-                  physics: NeverScrollableScrollPhysics(),
+                  physics: isWideScreen ? NeverScrollableScrollPhysics() : null,
                   scrollDirection: Axis.vertical, // Animasi vertikal
                   children: [
                     main(dashboardProvider, context),
@@ -224,7 +231,9 @@ class _DashboardPageState extends State<DashboardPage>
                                 "Anda bukan kepala keluarga");
                           case FamilyCodeState.success:
                             return Padding(
-                              padding: const EdgeInsets.only(top: AppPadding.large, left: AppPadding.large),
+                              padding: const EdgeInsets.only(
+                                  top: AppPadding.large,
+                                  left: AppPadding.large),
                               child: Text(
                                   "Family Code: ${familyCodeProvider.familyCode ?? "Loading..."}"),
                             );
@@ -645,6 +654,47 @@ class _DashboardPageState extends State<DashboardPage>
     ));
   }
 
+  void showTransactionSnackbar(
+      BuildContext context, DashboardProvider dashboardProvider) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (dashboardProvider.editTransactionState == DashboardState.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(dashboardProvider.editTransactionError ??
+                "Gagal mengedit transaksi"),
+          ),
+        );
+      } else if (dashboardProvider.editTransactionState ==
+          DashboardState.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.green,
+            content: const Text("Berhasil mengedit transaksi"),
+          ),
+        );
+      }
+
+      if (dashboardProvider.deleteTransactionState == DashboardState.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(dashboardProvider.deleteTransactionError ??
+                "Gagal menghapus transaksi"),
+          ),
+        );
+      } else if (dashboardProvider.deleteTransactionState ==
+          DashboardState.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.green,
+            content: const Text("Berhasil menghapus transaksi"),
+          ),
+        );
+      }
+    });
+  }
+
   historyTable({
     required List<HistoryTransaction> history,
     Meta? meta,
@@ -760,9 +810,10 @@ class _DashboardPageState extends State<DashboardPage>
                                     DataColumn(label: Text('Kategori')),
                                     DataColumn(label: Text('Jumlah')),
                                     DataColumn(label: Text('Tanggal')),
+                                    DataColumn(label: Text('Aksi')),
                                   ],
-                                  rows: history!.map((expense) {
-                                    final index = history!.indexOf(expense) + 1;
+                                  rows: history.map((expense) {
+                                    final index = history.indexOf(expense) + 1;
                                     return DataRow(cells: [
                                       DataCell(Text('$index')),
                                       DataCell(Text(expense.description)),
@@ -771,6 +822,28 @@ class _DashboardPageState extends State<DashboardPage>
                                           'Rp. ${expense.amount.toString()}')),
                                       DataCell(Text(
                                           '${expense.transactionAt.toLocal().toString().split(' ')[0]}')),
+                                      DataCell(
+                                        Row(
+                                          children: [
+                                            IconButton(
+                                              icon: const Icon(Icons.edit,
+                                                  color: Colors.blue),
+                                              onPressed: () {
+                                                _editTransaction(context,
+                                                    expense); // Panggil fungsi edit
+                                              },
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete,
+                                                  color: Colors.red),
+                                              onPressed: () {
+                                                _deleteTransaction(
+                                                    context, expense.id);
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ]);
                                   }).toList(),
                                   // [
@@ -780,7 +853,14 @@ class _DashboardPageState extends State<DashboardPage>
                             )
                           : ListView(
                               children: [
-                                ScrollableDataTable(history: history!),
+                                ScrollableDataTable(
+                                  history: history,
+                                  onEdit: (transaction) =>
+                                      _editTransaction(context, transaction),
+                                  onDelete: (transactionId) =>
+                                      _deleteTransaction(
+                                          context, transactionId),
+                                ),
                               ],
                             ),
                     )
@@ -908,9 +988,9 @@ class _DashboardPageState extends State<DashboardPage>
                                     DataColumn(label: Text('Jumlah')),
                                     DataColumn(label: Text('Tanggal')),
                                   ],
-                                  rows: familyHistory!.map((expense) {
+                                  rows: familyHistory.map((expense) {
                                     final index =
-                                        familyHistory!.indexOf(expense) + 1;
+                                        familyHistory.indexOf(expense) + 1;
                                     return DataRow(cells: [
                                       DataCell(Text('$index')),
                                       DataCell(
@@ -943,6 +1023,145 @@ class _DashboardPageState extends State<DashboardPage>
         ),
       ),
     );
+  }
+
+  void _editTransaction(
+      BuildContext context, HistoryTransaction transaction) async {
+    final updatedTransaction = await showDialog<HistoryTransaction>(
+      context: context,
+      builder: (context) {
+        String description = transaction.description;
+        String category = transaction.category;
+        double amount = transaction.amount;
+        DateTime transactionAt = transaction.transactionAt;
+
+        // State controllers for TextField
+        TextEditingController descriptionController =
+            TextEditingController(text: description);
+        TextEditingController categoryController =
+            TextEditingController(text: category);
+        TextEditingController amountController =
+            TextEditingController(text: amount.toString());
+        TextEditingController dateController = TextEditingController(
+            text: transactionAt.toLocal().toString().split(' ')[0]);
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Edit Transaksi'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Keterangan'),
+                    controller: descriptionController,
+                    onChanged: (value) => description = value,
+                  ),
+                  SizedBox(height: AppPadding.large),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Kategori'),
+                    controller: categoryController,
+                    onChanged: (value) => category = value,
+                  ),
+                  SizedBox(height: AppPadding.large),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Jumlah'),
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) => amount = double.tryParse(value) ?? 0,
+                  ),
+                  SizedBox(height: AppPadding.large),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Tanggal'),
+                    controller: dateController,
+                    readOnly: true,
+                    onTap: () async {
+                      DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: transactionAt,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          transactionAt = picked;
+                          dateController.text =
+                              transactionAt.toLocal().toString().split(' ')[0];
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text('Batal'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(
+                      context,
+                      transaction.copyWith(
+                        description: description,
+                        category: category,
+                        amount: amount,
+                        transactionAt: transactionAt,
+                      ),
+                    );
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (updatedTransaction != null) {
+      // Panggil API untuk menyimpan perubahan
+      await context.read<DashboardProvider>().editTransaction(
+            transactionId: updatedTransaction.id,
+            amount: updatedTransaction.amount,
+            transactionType: updatedTransaction.transactionType,
+            category: updatedTransaction.category,
+            transactionAt: updatedTransaction.transactionAt,
+            description: updatedTransaction.description,
+          );
+
+      showTransactionSnackbar(context, context.read<DashboardProvider>());
+    }
+  }
+
+  void _deleteTransaction(BuildContext context, int transactionId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Hapus Transaksi'),
+          content:
+              const Text('Apakah Anda yakin ingin menghapus transaksi ini?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Hapus'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      await context
+          .read<DashboardProvider>()
+          .deleteTransaction(transactionId: transactionId);
+      showTransactionSnackbar(context, context.read<DashboardProvider>());
+    }
   }
 
   String _formatDate(DateTime date) {

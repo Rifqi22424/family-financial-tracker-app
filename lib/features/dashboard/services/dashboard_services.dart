@@ -91,6 +91,68 @@ class DashboardServices {
     }
   }
 
+  Future<void> editTransaction({
+    required String token,
+    required int transactionId,
+    required double amount,
+    required String transactionType,
+    required String category,
+    required DateTime transactionAt,
+    String description = "",
+  }) async {
+    final url = Uri.parse("$baseUrl/transaction/$transactionId");
+
+    try {
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'amount': amount,
+          'transactionType': transactionType,
+          'category': category,
+          'transactionAt': transactionAt.toIso8601String(),
+          'description': description,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        final errorData = jsonDecode(response.body);
+        throw errorData["error"]["message"] ?? "Gagal mengedit transaksi.";
+      }
+    } catch (e) {
+      print("Error in editTransaction: ${e.toString()}");
+      throw e;
+    }
+  }
+
+  Future<void> deleteTransaction({
+    required String token,
+    required int transactionId,
+  }) async {
+    final url = Uri.parse("$baseUrl/transaction/$transactionId");
+
+    try {
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        final errorData = jsonDecode(response.body);
+        throw errorData["error"]["message"] ?? "Gagal menghapus transaksi.";
+      }
+    } catch (e) {
+      print("Error in deleteTransaction: ${e.toString()}");
+      throw e;
+    }
+  }
+
   Future<void> addTransaction({
     required String token,
     required double amount,

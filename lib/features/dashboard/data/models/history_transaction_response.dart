@@ -50,6 +50,30 @@ class HistoryTransaction {
       transactionAt: DateTime.parse(json['transactionAt']),
     );
   }
+
+  HistoryTransaction copyWith({
+    int? id,
+    int? familyId,
+    int? memberId,
+    double? amount,
+    String? transactionType,
+    String? description,
+    String? category,
+    String? imageUrl,
+    DateTime? transactionAt,
+  }) {
+    return HistoryTransaction(
+      id: id ?? this.id,
+      familyId: familyId ?? this.familyId,
+      memberId: memberId ?? this.memberId,
+      amount: amount ?? this.amount,
+      transactionType: transactionType ?? this.transactionType,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      imageUrl: imageUrl ?? this.imageUrl,
+      transactionAt: transactionAt ?? this.transactionAt,
+    );
+  }
 }
 
 class Meta {
